@@ -7,8 +7,10 @@ Personal offline asset dashboard app for side-loaded Android use.
 - Tracks balances by custom category and platform, such as payment platforms > Alipay / WeChat.
 - Supports adding, renaming, enabling, disabling, and marking categories as negative assets.
 - Provides a setting to decide whether negative asset categories are deducted from total assets and snapshots.
+- Keeps category management and visual theme selection in secondary Settings pages.
+- Includes five selectable visual themes: classic gray, obsidian green, deep sea blue, moon purple gray, and cafe gold.
 - Saves one daily asset snapshot when balances are saved.
-- Shows total assets, fixed category summaries, and asset trend charts.
+- Shows total assets, editable category summaries, and asset trend charts.
 - Supports amount hiding for privacy.
 - Exports and imports JSON backups.
 - Stores data locally with IndexedDB. There is no login, server, cloud sync, or automatic bank integration.

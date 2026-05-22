@@ -139,6 +139,16 @@ describe('asset store', () => {
     expect((await repository.read()).settings.hideAmounts).toBe(true);
   });
 
+  it('persists selected visual theme', async () => {
+    const store = createAssetStore(repository);
+    await store.load();
+
+    await store.setTheme('ocean');
+
+    expect(store.state.settings.themeId).toBe('ocean');
+    expect((await repository.read()).settings.themeId).toBe('ocean');
+  });
+
   it('exports and imports backup JSON', async () => {
     const store = createAssetStore(repository);
     await store.load();

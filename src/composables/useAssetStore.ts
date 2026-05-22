@@ -9,7 +9,7 @@ import {
   upsertSnapshot,
 } from '../domain/calculations';
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../domain/categories';
-import type { Account, AppSettings, AssetCategory, CategoryId, DailySnapshot } from '../domain/types';
+import type { Account, AppSettings, AssetCategory, CategoryId, DailySnapshot, ThemeId } from '../domain/types';
 import {
   createSeededData,
   IndexedDbAssetRepository,
@@ -213,6 +213,12 @@ export const createAssetStore = (
     await persist();
   };
 
+  const setTheme = async (themeId: ThemeId): Promise<void> => {
+    state.settings = { ...state.settings, themeId };
+    state.statusMessage = '配色已切换';
+    await persist();
+  };
+
   const exportBackup = async (exportedAt = now().toISOString()): Promise<string> => {
     const settings: AppSettings = { ...state.settings, lastBackupAt: exportedAt };
     state.settings = settings;
@@ -273,6 +279,7 @@ export const createAssetStore = (
     saveBalances,
     setHideAmounts,
     setDeductNegativeAssets,
+    setTheme,
     exportBackup,
     importBackup,
     clearAll,

@@ -1,5 +1,7 @@
 export type CategoryId = string;
 
+export type ThemeId = 'classic' | 'obsidian' | 'ocean' | 'moon' | 'cafe';
+
 export interface AssetCategory {
   id: CategoryId;
   name: string;
@@ -45,6 +47,7 @@ export interface AppSettings {
   currency: 'CNY';
   hideAmounts: boolean;
   deductNegativeAssets: boolean;
+  themeId: ThemeId;
   lastBackupAt: string | null;
   appVersion: string;
 }

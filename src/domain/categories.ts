@@ -1,4 +1,5 @@
 import type { Account, AppSettings, AssetCategory } from './types';
+import { DEFAULT_THEME_ID } from './themes';
 
 export const APP_VERSION = '0.1.0';
 
@@ -77,6 +78,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   currency: 'CNY',
   hideAmounts: false,
   deductNegativeAssets: true,
+  themeId: DEFAULT_THEME_ID,
   lastBackupAt: null,
   appVersion: APP_VERSION,
 };
