@@ -1,5 +1,5 @@
 import { CATEGORY_IDS } from './categories';
-import type { Account, CategoryId, DailySnapshot, TrendRange } from './types';
+import type { Account, CategoryId, DailySnapshot } from './types';
 
 export const emptyCategoryTotals = (): Record<CategoryId, number> =>
   CATEGORY_IDS.reduce(
@@ -90,19 +90,21 @@ export const formatSignedMoney = (value: number, hidden: boolean): string => {
 
 export const getDateKey = (date = new Date()): string => date.toISOString().slice(0, 10);
 
-export const getChangeForRange = (
-  snapshots: DailySnapshot[],
-  currentTotal: number,
-  range: TrendRange,
-): number => {
+export const getSnapshotChange = (snapshots: DailySnapshot[]): number => {
   const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
-  if (sorted.length === 0) {
+  if (sorted.length < 2) {
     return 0;
   }
 
-  const lookback = range === 'day' ? 1 : range === 'week' ? 7 : 30;
-  const baselineIndex = Math.max(0, sorted.length - 1 - lookback);
-  return roundMoney(currentTotal - sorted[baselineIndex].totalAsset);
+  return roundMoney(sorted[sorted.length - 1].totalAsset - sorted[sorted.length - 2].totalAsset);
+};
+
+export const getVisibleTrendSnapshots = (
+  snapshots: DailySnapshot[],
+  windowSize: number,
+): DailySnapshot[] => {
+  const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
+  return sorted.slice(Math.max(0, sorted.length - Math.max(1, windowSize)));
 };
 
 export const parseAmount = (value: string): number | null => {

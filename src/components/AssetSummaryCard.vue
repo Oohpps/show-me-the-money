@@ -15,7 +15,7 @@ defineProps<{
       <strong>{{ formatMoney(total, hidden) }}</strong>
     </div>
     <div class="change-pill" :class="{ loss: change < 0 }">
-      {{ formatSignedMoney(change, hidden) }} 本月
+      {{ formatSignedMoney(change, hidden) }} 较上次
     </div>
   </section>
 </template>

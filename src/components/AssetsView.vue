@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { AssetStore } from '../composables/useAssetStore';
-import { getChangeForRange } from '../domain/calculations';
+import { getSnapshotChange } from '../domain/calculations';
 import AssetSummaryCard from './AssetSummaryCard.vue';
 import CategoryGrid from './CategoryGrid.vue';
 import TrendChart from './TrendChart.vue';
@@ -15,7 +15,7 @@ defineEmits<{
 }>();
 
 const monthChange = computed(() =>
-  getChangeForRange(props.store.state.snapshots, props.store.totalAsset.value, 'month'),
+  getSnapshotChange(props.store.state.snapshots),
 );
 </script>
 

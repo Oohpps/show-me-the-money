@@ -5,6 +5,8 @@ import {
   calculateCategoryTotals,
   calculateTotalAsset,
   formatMoney,
+  getSnapshotChange,
+  getVisibleTrendSnapshots,
   upsertSnapshot,
 } from './calculations';
 
@@ -88,5 +90,37 @@ describe('asset calculations', () => {
   it('formats hidden and visible money consistently', () => {
     expect(formatMoney(123456.789, false)).toBe('CNY 123,456.79');
     expect(formatMoney(123456.789, true)).toBe('CNY ****');
+  });
+
+  it('calculates change between latest two recorded snapshots', () => {
+    const first = buildDailySnapshot(
+      [baseAccount({ id: 'bank', balance: 1000 })],
+      '2026-05-20',
+      '2026-05-20T08:00:00.000Z',
+    );
+    const second = buildDailySnapshot(
+      [baseAccount({ id: 'bank', balance: 880 })],
+      '2026-05-22',
+      '2026-05-22T08:00:00.000Z',
+    );
+
+    expect(getSnapshotChange([second, first])).toBe(-120);
+    expect(getSnapshotChange([second])).toBe(0);
+  });
+
+  it('returns the latest recorded snapshots for a manual zoom window', () => {
+    const snapshots = ['2026-05-01', '2026-05-05', '2026-05-12', '2026-05-22'].map((date, index) =>
+      buildDailySnapshot(
+        [baseAccount({ id: 'bank', balance: 1000 + index })],
+        date,
+        `${date}T08:00:00.000Z`,
+      ),
+    );
+
+    expect(getVisibleTrendSnapshots(snapshots, 2).map((snapshot) => snapshot.date)).toEqual([
+      '2026-05-12',
+      '2026-05-22',
+    ]);
+    expect(getVisibleTrendSnapshots(snapshots, 20)).toHaveLength(4);
   });
 });

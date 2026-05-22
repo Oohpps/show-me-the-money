@@ -49,4 +49,3 @@ export interface BackupPayload {
   settings: AppSettings;
 }
 
-export type TrendRange = 'day' | 'week' | 'month';

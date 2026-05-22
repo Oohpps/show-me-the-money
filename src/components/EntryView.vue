@@ -60,6 +60,6 @@ const save = async () => {
       />
     </section>
     <p v-if="error.message" class="form-error">{{ error.message }}</p>
-    <button class="primary-action" type="submit">保存今日快照</button>
+    <button class="primary-action" type="submit">保存本次快照</button>
   </form>
 </template>

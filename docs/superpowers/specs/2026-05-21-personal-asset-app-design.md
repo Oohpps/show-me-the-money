@@ -28,7 +28,7 @@ Included in version 1:
 - Platform balance entry with both single-platform edit and batch entry.
 - Custom platform accounts under fixed categories.
 - Category statistics with totals, percentages, and platform details.
-- Trend details with day, week, and month views.
+- Trend details based on actual saved balance snapshots, with manual zoom range controls.
 - Settings for JSON export, JSON import, amount hiding, and data clearing.
 - Local-only storage and offline use.
 
@@ -64,7 +64,7 @@ It shows:
 - Total asset card with CNY total.
 - Current month or current day change summary.
 - Category card grid.
-- Asset trend chart with day, week, and month switch.
+- Asset trend chart based on recorded snapshot count, with manual zoom range controls.
 
 Behavior:
 
@@ -255,7 +255,7 @@ Visual checks:
 - Large amounts do not overflow.
 - Bottom navigation does not cover content.
 - Entry rows remain easy to tap and edit on mobile.
-- Trend chart remains readable with day, week, and month switches.
+- Trend chart remains readable when manually zooming the recorded snapshot range.
 
 Build checks:
 

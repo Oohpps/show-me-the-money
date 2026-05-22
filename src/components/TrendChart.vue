@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { formatMoney } from '../domain/calculations';
-import type { DailySnapshot, TrendRange } from '../domain/types';
+import { computed, ref, watch } from 'vue';
+import { formatMoney, getVisibleTrendSnapshots } from '../domain/calculations';
+import type { DailySnapshot } from '../domain/types';
 
 const props = defineProps<{
   snapshots: DailySnapshot[];
@@ -9,16 +9,29 @@ const props = defineProps<{
   hidden: boolean;
 }>();
 
-const range = ref<TrendRange>('day');
-const rangeOptions: Array<{ id: TrendRange; label: string }> = [
-  { id: 'day', label: '日' },
-  { id: 'week', label: '周' },
-  { id: 'month', label: '月' },
-];
+const windowSize = ref(8);
+const maxWindowSize = computed(() => Math.max(1, props.snapshots.length));
+const visibleSnapshots = computed(() => getVisibleTrendSnapshots(props.snapshots, windowSize.value));
+
+watch(
+  () => props.snapshots.length,
+  (length) => {
+    windowSize.value = Math.max(1, Math.min(windowSize.value, length || 1));
+  },
+  { immediate: true },
+);
+
+const zoomIn = () => {
+  windowSize.value = Math.max(1, windowSize.value - 1);
+};
+
+const zoomOut = () => {
+  windowSize.value = Math.min(maxWindowSize.value, windowSize.value + 1);
+};
 
 const chartPoints = computed(() => {
-  const points = props.snapshots.length
-    ? props.snapshots.map((snapshot) => ({ date: snapshot.date, value: snapshot.totalAsset }))
+  const points = visibleSnapshots.value.length
+    ? visibleSnapshots.value.map((snapshot) => ({ date: snapshot.date, value: snapshot.totalAsset }))
     : [{ date: '当前', value: props.currentTotal }];
   const values = points.map((point) => point.value);
   const min = Math.min(...values, props.currentTotal);
@@ -40,18 +53,22 @@ const area = computed(() => `0,100 ${polyline.value} 100,100`);
   <section class="section-block trend-block">
     <div class="section-title-row">
       <h2>资产趋势图</h2>
-      <div class="segmented">
-        <button
-          v-for="option in rangeOptions"
-          :key="option.id"
-          type="button"
-          :class="{ active: range === option.id }"
-          @click="range = option.id"
-        >
-          {{ option.label }}
-        </button>
+      <div class="zoom-controls" aria-label="趋势图缩放">
+        <button type="button" :disabled="windowSize <= 1" aria-label="放大范围" @click="zoomIn">+</button>
+        <button type="button" :disabled="windowSize >= maxWindowSize" aria-label="缩小范围" @click="zoomOut">-</button>
       </div>
     </div>
+
+    <label class="range-control">
+      <span>{{ snapshots.length ? `最近 ${windowSize} 次录入 / 共 ${snapshots.length} 次` : '暂无录入快照' }}</span>
+      <input
+        v-model.number="windowSize"
+        type="range"
+        :min="1"
+        :max="maxWindowSize"
+        :disabled="snapshots.length <= 1"
+      />
+    </label>
 
     <svg class="trend-chart" viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="资产趋势">
       <line x1="0" x2="100" y1="20" y2="20" />
