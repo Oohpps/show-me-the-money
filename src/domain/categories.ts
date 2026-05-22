@@ -1,21 +1,82 @@
-import type { Account, AppSettings, CategoryDefinition, CategoryId } from './types';
+import type { Account, AppSettings, AssetCategory } from './types';
 
 export const APP_VERSION = '0.1.0';
 
-export const CATEGORIES: CategoryDefinition[] = [
-  { id: 'bank', label: '银行卡', shortLabel: '银行', icon: 'card' },
-  { id: 'payment', label: '支付平台', shortLabel: '支付', icon: 'wallet' },
-  { id: 'wealth', label: '理财', shortLabel: '理财', icon: 'bag' },
-  { id: 'fund', label: '基金', shortLabel: '基金', icon: 'chart' },
-  { id: 'stock', label: '股票', shortLabel: '股票', icon: 'screen' },
-  { id: 'liability', label: '信用卡/负债', shortLabel: '负债', icon: 'credit' },
-];
+const SEED_TIMESTAMP = '2026-05-20T08:00:00.000Z';
 
-export const CATEGORY_IDS = CATEGORIES.map((category) => category.id) as CategoryId[];
+export const DEFAULT_CATEGORIES: AssetCategory[] = [
+  {
+    id: 'bank',
+    name: '银行卡',
+    shortName: '银行',
+    icon: 'card',
+    isNegative: false,
+    active: true,
+    sortOrder: 10,
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
+  },
+  {
+    id: 'payment',
+    name: '支付平台',
+    shortName: '支付',
+    icon: 'wallet',
+    isNegative: false,
+    active: true,
+    sortOrder: 20,
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
+  },
+  {
+    id: 'wealth',
+    name: '理财',
+    shortName: '理财',
+    icon: 'bag',
+    isNegative: false,
+    active: true,
+    sortOrder: 30,
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
+  },
+  {
+    id: 'fund',
+    name: '基金',
+    shortName: '基金',
+    icon: 'chart',
+    isNegative: false,
+    active: true,
+    sortOrder: 40,
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
+  },
+  {
+    id: 'stock',
+    name: '股票',
+    shortName: '股票',
+    icon: 'screen',
+    isNegative: false,
+    active: true,
+    sortOrder: 50,
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
+  },
+  {
+    id: 'liability',
+    name: '信用卡/负债',
+    shortName: '负债',
+    icon: 'credit',
+    isNegative: true,
+    active: true,
+    sortOrder: 60,
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
+  },
+];
 
 export const DEFAULT_SETTINGS: AppSettings = {
   currency: 'CNY',
   hideAmounts: false,
+  deductNegativeAssets: true,
   lastBackupAt: null,
   appVersion: APP_VERSION,
 };
@@ -29,8 +90,8 @@ export const SEED_ACCOUNTS: Account[] = [
     includeInTotal: true,
     note: '工资卡与活期',
     sortOrder: 10,
-    createdAt: '2026-05-20T08:00:00.000Z',
-    updatedAt: '2026-05-20T08:00:00.000Z',
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
   },
   {
     id: 'alipay',
@@ -40,8 +101,8 @@ export const SEED_ACCOUNTS: Account[] = [
     includeInTotal: true,
     note: '',
     sortOrder: 20,
-    createdAt: '2026-05-20T08:00:00.000Z',
-    updatedAt: '2026-05-20T08:00:00.000Z',
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
   },
   {
     id: 'wechat',
@@ -51,8 +112,8 @@ export const SEED_ACCOUNTS: Account[] = [
     includeInTotal: true,
     note: '',
     sortOrder: 30,
-    createdAt: '2026-05-20T08:00:00.000Z',
-    updatedAt: '2026-05-20T08:00:00.000Z',
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
   },
   {
     id: 'funds',
@@ -62,8 +123,8 @@ export const SEED_ACCOUNTS: Account[] = [
     includeInTotal: true,
     note: '',
     sortOrder: 40,
-    createdAt: '2026-05-20T08:00:00.000Z',
-    updatedAt: '2026-05-20T08:00:00.000Z',
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
   },
   {
     id: 'stock',
@@ -73,8 +134,8 @@ export const SEED_ACCOUNTS: Account[] = [
     includeInTotal: true,
     note: '',
     sortOrder: 50,
-    createdAt: '2026-05-20T08:00:00.000Z',
-    updatedAt: '2026-05-20T08:00:00.000Z',
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
   },
   {
     id: 'wealth',
@@ -84,8 +145,8 @@ export const SEED_ACCOUNTS: Account[] = [
     includeInTotal: true,
     note: '',
     sortOrder: 60,
-    createdAt: '2026-05-20T08:00:00.000Z',
-    updatedAt: '2026-05-20T08:00:00.000Z',
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
   },
   {
     id: 'credit-card',
@@ -95,7 +156,7 @@ export const SEED_ACCOUNTS: Account[] = [
     includeInTotal: true,
     note: '负数表示欠款',
     sortOrder: 70,
-    createdAt: '2026-05-20T08:00:00.000Z',
-    updatedAt: '2026-05-20T08:00:00.000Z',
+    createdAt: SEED_TIMESTAMP,
+    updatedAt: SEED_TIMESTAMP,
   },
 ];

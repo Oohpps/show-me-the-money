@@ -5,10 +5,11 @@ import {
   calculateCategoryTotals,
   calculateTotalAsset,
   getDateKey,
+  sortCategories,
   upsertSnapshot,
 } from '../domain/calculations';
-import { DEFAULT_SETTINGS } from '../domain/categories';
-import type { Account, AppSettings, CategoryId, DailySnapshot } from '../domain/types';
+import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../domain/categories';
+import type { Account, AppSettings, AssetCategory, CategoryId, DailySnapshot } from '../domain/types';
 import {
   createSeededData,
   IndexedDbAssetRepository,
@@ -24,12 +25,18 @@ interface NewAccountInput {
   note: string;
 }
 
+interface NewCategoryInput {
+  name: string;
+  isNegative: boolean;
+}
+
 interface AssetState extends AssetData {
   loaded: boolean;
   statusMessage: string;
 }
 
 const createInitialState = (): AssetState => ({
+  categories: [],
   accounts: [],
   snapshots: [],
   settings: { ...DEFAULT_SETTINGS },
@@ -40,8 +47,16 @@ const createInitialState = (): AssetState => ({
 const sortAccounts = (accounts: Account[]): Account[] =>
   [...accounts].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 
-const makeId = (name: string, timestamp: number): string =>
-  `${name.trim().toLowerCase().replace(/\s+/g, '-') || 'account'}-${timestamp}`;
+const makeId = (name: string, timestamp: number): string => {
+  const normalized = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{Letter}\p{Number}]+/gu, '-')
+    .replace(/^-|-$/g, '');
+  return `${normalized || 'item'}-${timestamp}`;
+};
+
+const makeShortName = (name: string): string => name.trim().slice(0, 2) || '分类';
 
 const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
   new Promise<T>((resolve, reject) => {
@@ -64,13 +79,15 @@ export const createAssetStore = (
   const state = reactive<AssetState>(createInitialState());
 
   const replaceState = (data: AssetData): void => {
+    state.categories = sortCategories(data.categories?.length ? data.categories : DEFAULT_CATEGORIES);
     state.accounts = sortAccounts(data.accounts);
     state.snapshots = [...data.snapshots].sort((a, b) => a.date.localeCompare(b.date));
-    state.settings = { ...data.settings };
+    state.settings = { ...DEFAULT_SETTINGS, ...data.settings };
   };
 
   const persist = async (): Promise<void> => {
     await repository.write({
+      categories: state.categories,
       accounts: state.accounts,
       snapshots: state.snapshots,
       settings: state.settings,
@@ -80,7 +97,11 @@ export const createAssetStore = (
   const load = async (): Promise<void> => {
     try {
       const data = await withTimeout(repository.read(), 800);
-      replaceState(data.accounts.length === 0 && data.snapshots.length === 0 ? createSeededData() : data);
+      replaceState(
+        data.categories.length === 0 && data.accounts.length === 0 && data.snapshots.length === 0
+          ? createSeededData()
+          : data,
+      );
     } catch {
       replaceState(createSeededData());
       state.statusMessage = '本地存储暂不可用，已载入示例数据';
@@ -88,9 +109,60 @@ export const createAssetStore = (
     state.loaded = true;
   };
 
-  const totalAsset = computed(() => calculateTotalAsset(state.accounts));
-  const categoryTotals = computed(() => calculateCategoryTotals(state.accounts));
+  const totalAsset = computed(() =>
+    calculateTotalAsset(state.accounts, state.categories, state.settings.deductNegativeAssets),
+  );
+  const categoryTotals = computed(() =>
+    calculateCategoryTotals(state.accounts, state.categories, state.settings.deductNegativeAssets),
+  );
+  const activeCategories = computed(() => state.categories.filter((category) => category.active));
   const visibleSnapshots = computed<DailySnapshot[]>(() => state.snapshots);
+
+  const addCategory = async (input: NewCategoryInput): Promise<void> => {
+    const timestamp = now().toISOString();
+    const category: AssetCategory = {
+      id: makeId(input.name, now().getTime()),
+      name: input.name.trim(),
+      shortName: makeShortName(input.name),
+      icon: input.isNegative ? 'debt' : 'asset',
+      isNegative: input.isNegative,
+      active: true,
+      sortOrder: state.categories.length
+        ? Math.max(...state.categories.map((item) => item.sortOrder)) + 10
+        : 10,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    state.categories = sortCategories([...state.categories, category]);
+    state.statusMessage = '分类已添加';
+    await persist();
+  };
+
+  const updateCategory = async (
+    categoryId: CategoryId,
+    patch: Partial<Pick<AssetCategory, 'name' | 'isNegative' | 'active'>>,
+  ): Promise<void> => {
+    const timestamp = now().toISOString();
+    state.categories = sortCategories(
+      state.categories.map((category) =>
+        category.id === categoryId
+          ? {
+              ...category,
+              ...patch,
+              shortName: patch.name ? makeShortName(patch.name) : category.shortName,
+              updatedAt: timestamp,
+            }
+          : category,
+      ),
+    );
+    state.statusMessage = '分类已更新';
+    await persist();
+  };
+
+  const deactivateCategory = async (categoryId: CategoryId): Promise<void> => {
+    await updateCategory(categoryId, { active: false });
+  };
 
   const addAccount = async (input: NewAccountInput): Promise<void> => {
     const timestamp = now().toISOString();
@@ -118,7 +190,13 @@ export const createAssetStore = (
         ? { ...account, balance: balances[account.id], updatedAt: timestamp }
         : account,
     );
-    const snapshot = buildDailySnapshot(state.accounts, getDateKey(now()), timestamp);
+    const snapshot = buildDailySnapshot(
+      state.accounts,
+      state.categories,
+      state.settings.deductNegativeAssets,
+      getDateKey(now()),
+      timestamp,
+    );
     state.snapshots = upsertSnapshot(state.snapshots, snapshot);
     state.statusMessage = '余额已保存';
     await persist();
@@ -129,11 +207,18 @@ export const createAssetStore = (
     await persist();
   };
 
+  const setDeductNegativeAssets = async (deductNegativeAssets: boolean): Promise<void> => {
+    state.settings = { ...state.settings, deductNegativeAssets };
+    state.statusMessage = deductNegativeAssets ? '已扣除负资产' : '已忽略负资产';
+    await persist();
+  };
+
   const exportBackup = async (exportedAt = now().toISOString()): Promise<string> => {
     const settings: AppSettings = { ...state.settings, lastBackupAt: exportedAt };
     state.settings = settings;
     await persist();
     return createBackupJson({
+      categories: state.categories,
       accounts: state.accounts,
       snapshots: state.snapshots,
       settings,
@@ -148,9 +233,11 @@ export const createAssetStore = (
     }
 
     const importedData: AssetData = {
+      categories: parsed.data.categories,
       accounts: parsed.data.accounts,
       snapshots: parsed.data.snapshots,
       settings: {
+        ...DEFAULT_SETTINGS,
         ...parsed.data.settings,
         currency: 'CNY',
         lastBackupAt: parsed.data.exportedAt,
@@ -165,11 +252,10 @@ export const createAssetStore = (
 
   const clearAll = async (): Promise<void> => {
     await repository.clear();
-    replaceState({
-      accounts: [],
-      snapshots: [],
-      settings: { ...DEFAULT_SETTINGS },
-    });
+    state.categories = [];
+    state.accounts = [];
+    state.snapshots = [];
+    state.settings = { ...DEFAULT_SETTINGS };
     state.statusMessage = '数据已清空';
   };
 
@@ -177,11 +263,16 @@ export const createAssetStore = (
     state,
     totalAsset,
     categoryTotals,
+    activeCategories,
     visibleSnapshots,
     load,
+    addCategory,
+    updateCategory,
+    deactivateCategory,
     addAccount,
     saveBalances,
     setHideAmounts,
+    setDeductNegativeAssets,
     exportBackup,
     importBackup,
     clearAll,

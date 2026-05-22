@@ -1,30 +1,67 @@
-import { CATEGORY_IDS } from './categories';
-import type { Account, CategoryId, DailySnapshot } from './types';
+import type { Account, AssetCategory, CategoryId, DailySnapshot } from './types';
 
-export const emptyCategoryTotals = (): Record<CategoryId, number> =>
-  CATEGORY_IDS.reduce(
-    (totals, categoryId) => ({
+export const sortCategories = (categories: AssetCategory[]): AssetCategory[] =>
+  [...categories].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+
+export const emptyCategoryTotals = (categories: AssetCategory[]): Record<CategoryId, number> =>
+  categories.reduce(
+    (totals, category) => ({
       ...totals,
-      [categoryId]: 0,
+      [category.id]: 0,
     }),
     {} as Record<CategoryId, number>,
   );
 
 export const roundMoney = (value: number): number => Math.round(value * 100) / 100;
 
-export const calculateTotalAsset = (accounts: Account[]): number =>
-  roundMoney(
+const normalizeAmountForTotal = (
+  amount: number,
+  category: AssetCategory | undefined,
+  deductNegativeAssets: boolean,
+): number => {
+  if (!category?.isNegative) {
+    return amount;
+  }
+
+  if (!deductNegativeAssets) {
+    return 0;
+  }
+
+  return -Math.abs(amount);
+};
+
+export const calculateTotalAsset = (
+  accounts: Account[],
+  categories: AssetCategory[],
+  deductNegativeAssets: boolean,
+): number => {
+  const categoryMap = new Map(categories.map((category) => [category.id, category]));
+
+  return roundMoney(
     accounts
       .filter((account) => account.includeInTotal)
-      .reduce((total, account) => total + account.balance, 0),
+      .reduce(
+        (total, account) =>
+          total + normalizeAmountForTotal(account.balance, categoryMap.get(account.category), deductNegativeAssets),
+        0,
+      ),
   );
+};
 
-export const calculateCategoryTotals = (accounts: Account[]): Record<CategoryId, number> => {
-  const totals = emptyCategoryTotals();
+export const calculateCategoryTotals = (
+  accounts: Account[],
+  categories: AssetCategory[],
+  deductNegativeAssets: boolean,
+): Record<CategoryId, number> => {
+  const totals = emptyCategoryTotals(categories);
+  const categoryMap = new Map(categories.map((category) => [category.id, category]));
 
   for (const account of accounts) {
-    if (account.includeInTotal) {
-      totals[account.category] = roundMoney(totals[account.category] + account.balance);
+    if (account.includeInTotal && account.category in totals) {
+      totals[account.category] = roundMoney(
+        totals[account.category] +
+          normalizeAmountForTotal(account.balance, categoryMap.get(account.category), deductNegativeAssets),
+      );
     }
   }
 
@@ -33,18 +70,26 @@ export const calculateCategoryTotals = (accounts: Account[]): Record<CategoryId,
 
 export const buildDailySnapshot = (
   accounts: Account[],
+  categories: AssetCategory[],
+  deductNegativeAssets: boolean,
   date: string,
   timestamp: string,
 ): DailySnapshot => ({
   date,
-  totalAsset: calculateTotalAsset(accounts),
-  categoryTotals: calculateCategoryTotals(accounts),
+  totalAsset: calculateTotalAsset(accounts, categories, deductNegativeAssets),
+  categoryTotals: calculateCategoryTotals(accounts, categories, deductNegativeAssets),
   accountBalances: accounts.reduce<Record<string, number>>((balances, account) => {
     if (account.includeInTotal) {
       balances[account.id] = account.balance;
     }
     return balances;
   }, {}),
+  categories: sortCategories(categories).map((category) => ({
+    id: category.id,
+    name: category.name,
+    isNegative: category.isNegative,
+  })),
+  deductNegativeAssets,
   createdAt: timestamp,
   updatedAt: timestamp,
 });

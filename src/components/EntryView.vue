@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, watchEffect } from 'vue';
 import type { AssetStore } from '../composables/useAssetStore';
-import { CATEGORIES } from '../domain/categories';
 import { parseAmount } from '../domain/calculations';
 import AmountInput from './AmountInput.vue';
 
@@ -25,10 +24,12 @@ watchEffect(() => {
 });
 
 const groupedAccounts = computed(() =>
-  CATEGORIES.map((category) => ({
-    category,
-    accounts: props.store.state.accounts.filter((account) => account.category === category.id),
-  })).filter((group) => group.accounts.length > 0),
+  props.store.state.categories
+    .map((category) => ({
+      category,
+      accounts: props.store.state.accounts.filter((account) => account.category === category.id),
+    }))
+    .filter((group) => group.accounts.length > 0),
 );
 
 const save = async () => {
@@ -50,7 +51,7 @@ const save = async () => {
 <template>
   <form class="page-stack" @submit.prevent="save">
     <section v-for="group in groupedAccounts" :key="group.category.id" class="form-panel">
-      <h2>{{ group.category.label }}</h2>
+      <h2>{{ group.category.name }}{{ group.category.isNegative ? '（负资产）' : '' }}</h2>
       <AmountInput
         v-for="account in group.accounts"
         :key="account.id"

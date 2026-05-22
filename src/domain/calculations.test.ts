@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Account, DailySnapshot } from './types';
+import { DEFAULT_CATEGORIES } from './categories';
+import type { Account, AssetCategory, DailySnapshot } from './types';
 import {
   buildDailySnapshot,
   calculateCategoryTotals,
@@ -9,6 +10,8 @@ import {
   getVisibleTrendSnapshots,
   upsertSnapshot,
 } from './calculations';
+
+const categories: AssetCategory[] = DEFAULT_CATEGORIES;
 
 const baseAccount = (account: Partial<Account>): Account => ({
   id: account.id ?? 'account',
@@ -23,58 +26,83 @@ const baseAccount = (account: Partial<Account>): Account => ({
 });
 
 describe('asset calculations', () => {
-  it('sums included accounts and subtracts liability balances', () => {
+  it('subtracts negative categories when the setting is enabled', () => {
     const accounts = [
       baseAccount({ id: 'bank', balance: 1000 }),
       baseAccount({ id: 'ignored', balance: 5000, includeInTotal: false }),
-      baseAccount({ id: 'card', category: 'liability', balance: -300 }),
+      baseAccount({ id: 'card', category: 'liability', balance: 300 }),
     ];
 
-    expect(calculateTotalAsset(accounts)).toBe(700);
+    expect(calculateTotalAsset(accounts, categories, true)).toBe(700);
   });
 
-  it('groups category totals with fixed categories', () => {
+  it('ignores negative categories when deduct negative assets is disabled', () => {
+    const accounts = [
+      baseAccount({ id: 'bank', balance: 1000 }),
+      baseAccount({ id: 'card', category: 'liability', balance: 300 }),
+    ];
+
+    expect(calculateTotalAsset(accounts, categories, false)).toBe(1000);
+  });
+
+  it('groups category totals with dynamic categories', () => {
     const accounts = [
       baseAccount({ id: 'bank-a', category: 'bank', balance: 1000 }),
       baseAccount({ id: 'bank-b', category: 'bank', balance: 200 }),
       baseAccount({ id: 'alipay', category: 'payment', balance: 88.5 }),
+      baseAccount({ id: 'card', category: 'liability', balance: 30 }),
       baseAccount({ id: 'hidden', category: 'fund', balance: 900, includeInTotal: false }),
     ];
 
-    expect(calculateCategoryTotals(accounts)).toMatchObject({
+    expect(calculateCategoryTotals(accounts, categories, true)).toMatchObject({
       bank: 1200,
       payment: 88.5,
       fund: 0,
-      liability: 0,
+      liability: -30,
     });
   });
 
-  it('builds one daily snapshot from current account balances', () => {
+  it('builds one daily snapshot with category metadata and settings', () => {
     const accounts = [
       baseAccount({ id: 'bank', category: 'bank', balance: 1000 }),
       baseAccount({ id: 'alipay', category: 'payment', balance: 300.12 }),
     ];
 
-    const snapshot = buildDailySnapshot(accounts, '2026-05-21', '2026-05-21T09:00:00.000Z');
+    const snapshot = buildDailySnapshot(
+      accounts,
+      categories,
+      true,
+      '2026-05-21',
+      '2026-05-21T09:00:00.000Z',
+    );
 
     expect(snapshot).toMatchObject({
       date: '2026-05-21',
       totalAsset: 1300.12,
+      deductNegativeAssets: true,
       accountBalances: {
         bank: 1000,
         alipay: 300.12,
       },
+    });
+    expect(snapshot.categories.find((category) => category.id === 'liability')).toMatchObject({
+      name: '信用卡/负债',
+      isNegative: true,
     });
   });
 
   it('replaces an existing snapshot for the same date', () => {
     const oldSnapshot: DailySnapshot = buildDailySnapshot(
       [baseAccount({ id: 'bank', balance: 500 })],
+      categories,
+      true,
       '2026-05-21',
       '2026-05-21T08:00:00.000Z',
     );
     const newSnapshot = buildDailySnapshot(
       [baseAccount({ id: 'bank', balance: 900 })],
+      categories,
+      true,
       '2026-05-21',
       '2026-05-21T11:00:00.000Z',
     );
@@ -95,11 +123,15 @@ describe('asset calculations', () => {
   it('calculates change between latest two recorded snapshots', () => {
     const first = buildDailySnapshot(
       [baseAccount({ id: 'bank', balance: 1000 })],
+      categories,
+      true,
       '2026-05-20',
       '2026-05-20T08:00:00.000Z',
     );
     const second = buildDailySnapshot(
       [baseAccount({ id: 'bank', balance: 880 })],
+      categories,
+      true,
       '2026-05-22',
       '2026-05-22T08:00:00.000Z',
     );
@@ -112,6 +144,8 @@ describe('asset calculations', () => {
     const snapshots = ['2026-05-01', '2026-05-05', '2026-05-12', '2026-05-22'].map((date, index) =>
       buildDailySnapshot(
         [baseAccount({ id: 'bank', balance: 1000 + index })],
+        categories,
+        true,
         date,
         `${date}T08:00:00.000Z`,
       ),

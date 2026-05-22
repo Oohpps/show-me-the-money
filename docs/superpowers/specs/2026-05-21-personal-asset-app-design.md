@@ -26,10 +26,10 @@ Included in version 1:
 
 - Asset dashboard with total assets, change summary, category cards, and trend chart.
 - Platform balance entry with both single-platform edit and batch entry.
-- Custom platform accounts under fixed categories.
+- Custom asset categories and custom platform accounts under those categories.
 - Category statistics with totals, percentages, and platform details.
 - Trend details based on actual saved balance snapshots, with manual zoom range controls.
-- Settings for JSON export, JSON import, amount hiding, and data clearing.
+- Settings for category management, deducting negative assets, JSON export, JSON import, amount hiding, and data clearing.
 - Local-only storage and offline use.
 
 Not included in version 1:
@@ -62,7 +62,7 @@ The Assets page is the default home page.
 It shows:
 
 - Total asset card with CNY total.
-- Current month or current day change summary.
+- Change summary compared with the previous recorded snapshot.
 - Category card grid.
 - Asset trend chart based on recorded snapshot count, with manual zoom range controls.
 
@@ -92,12 +92,12 @@ The Add flow creates a new platform account.
 Fields:
 
 - Platform name.
-- Fixed category.
+- User-maintained category.
 - Initial balance.
 - Include in total.
 - Optional note.
 
-Credit card or liability balances may be recorded as negative numbers, for example `-12000`.
+Negative asset behavior is controlled at the category level. A category such as credit cards, loans, or borrowing can be marked as negative. When the "deduct negative assets" setting is enabled, those category balances reduce total assets and snapshot totals.
 
 ### Stats
 
@@ -114,6 +114,8 @@ It should prioritize readable mobile lists and horizontal proportion bars over c
 The Settings page includes:
 
 - Hide amounts toggle.
+- Deduct negative assets toggle.
+- Category management: add categories, rename categories, enable or disable categories, and mark whether a category is negative.
 - Export JSON backup.
 - Import JSON backup.
 - Clear all local data.
@@ -123,9 +125,12 @@ Import validates the backup schema before replacing local data. Invalid imports 
 
 ## Categories
 
-Platforms are customizable, but categories are fixed to keep reporting stable.
+The app uses two asset levels:
 
-Initial fixed categories:
+- Category, such as payment platforms, stocks, bank cards, loans, or credit cards.
+- Platform/account under a category, such as WeChat and Alipay under payment platforms.
+
+Both levels are user-maintained. The app ships with default categories:
 
 - Bank Cards
 - Payment Platforms
@@ -134,9 +139,23 @@ Initial fixed categories:
 - Stocks
 - Credit Cards and Liabilities
 
-Category display names can be localized in Chinese in the UI.
+Each category has an `isNegative` flag. When `isNegative` is true, the category is treated as a negative asset category. The global `deductNegativeAssets` setting controls whether those balances reduce dashboard totals and snapshot totals.
 
 ## Data Model
+
+### Category
+
+Each category has:
+
+- `id`
+- `name`
+- `shortName`
+- `icon`
+- `isNegative`
+- `active`
+- `sortOrder`
+- `createdAt`
+- `updatedAt`
 
 ### Account
 
@@ -160,10 +179,12 @@ Each calendar date has at most one snapshot:
 - `totalAsset`
 - `categoryTotals`
 - `accountBalances`
+- `categories`, preserving category name and negative-asset status at snapshot time
+- `deductNegativeAssets`, preserving the setting used for that snapshot
 - `createdAt`
 - `updatedAt`
 
-Snapshot totals include only accounts where `includeInTotal` is true.
+Snapshot totals include only accounts where `includeInTotal` is true. Negative-category accounts reduce the total only when `deductNegativeAssets` is true.
 
 Historical snapshots keep their stored account balances even if an account is later deleted or disabled. This preserves the asset trend as it existed at the time.
 
@@ -173,6 +194,7 @@ Settings include:
 
 - `currency`, fixed to `CNY`
 - `hideAmounts`
+- `deductNegativeAssets`
 - `lastBackupAt`
 - `appVersion`
 
@@ -182,6 +204,7 @@ Exported JSON includes:
 
 - `schemaVersion`
 - `exportedAt`
+- `categories`
 - `accounts`
 - `snapshots`
 - `settings`
@@ -194,9 +217,9 @@ The UI should reference the provided asset-summary screenshot but not copy its m
 
 Direction:
 
-- Warm gray and graphite surfaces.
+- Obsidian green and mist-white surfaces.
 - Light gray or white page background.
-- Soft green for gains and pink for positive emphasis.
+- Mint green for gains, muted pink for warning and negative emphasis, and subtle gold highlights.
 - Large bold numeric hierarchy for money.
 - Two-column category cards on the dashboard.
 - Area line chart for asset trend.

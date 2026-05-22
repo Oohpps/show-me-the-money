@@ -4,7 +4,9 @@ Personal offline asset dashboard app for side-loaded Android use.
 
 ## What It Does
 
-- Tracks balances by platform, such as Alipay, WeChat, bank cards, funds, stocks, and liabilities.
+- Tracks balances by custom category and platform, such as payment platforms > Alipay / WeChat.
+- Supports adding, renaming, enabling, disabling, and marking categories as negative assets.
+- Provides a setting to decide whether negative asset categories are deducted from total assets and snapshots.
 - Saves one daily asset snapshot when balances are saved.
 - Shows total assets, fixed category summaries, and asset trend charts.
 - Supports amount hiding for privacy.

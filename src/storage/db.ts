@@ -1,7 +1,8 @@
-import { DEFAULT_SETTINGS, SEED_ACCOUNTS } from '../domain/categories';
-import type { Account, AppSettings, DailySnapshot } from '../domain/types';
+import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, SEED_ACCOUNTS } from '../domain/categories';
+import type { Account, AppSettings, AssetCategory, DailySnapshot } from '../domain/types';
 
 export interface AssetData {
+  categories: AssetCategory[];
   accounts: Account[];
   snapshots: DailySnapshot[];
   settings: AppSettings;
@@ -14,19 +15,23 @@ export interface AssetRepository {
 }
 
 export const createEmptyData = (): AssetData => ({
+  categories: [],
   accounts: [],
   snapshots: [],
   settings: { ...DEFAULT_SETTINGS },
 });
 
 const cloneData = (data: AssetData): AssetData => ({
+  categories: (data.categories ?? []).map((category) => ({ ...category })),
   accounts: data.accounts.map((account) => ({ ...account })),
   snapshots: data.snapshots.map((snapshot) => ({
     ...snapshot,
     categoryTotals: { ...snapshot.categoryTotals },
     accountBalances: { ...snapshot.accountBalances },
+    categories: (snapshot.categories ?? []).map((category) => ({ ...category })),
+    deductNegativeAssets: snapshot.deductNegativeAssets ?? true,
   })),
-  settings: { ...data.settings },
+  settings: { ...DEFAULT_SETTINGS, ...data.settings },
 });
 
 export class MemoryAssetRepository implements AssetRepository {
@@ -109,6 +114,7 @@ export class IndexedDbAssetRepository implements AssetRepository {
 }
 
 export const createSeededData = (): AssetData => ({
+  categories: DEFAULT_CATEGORIES.map((category) => ({ ...category })),
   accounts: SEED_ACCOUNTS.map((account) => ({ ...account })),
   snapshots: [],
   settings: { ...DEFAULT_SETTINGS },

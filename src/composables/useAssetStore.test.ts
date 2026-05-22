@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, SEED_ACCOUNTS } from '../domain/categories';
+import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, SEED_ACCOUNTS } from '../domain/categories';
 import { createBackupJson } from '../domain/backup';
 import { MemoryAssetRepository } from '../storage/db';
 import { createAssetStore } from './useAssetStore';
@@ -11,13 +11,29 @@ describe('asset store', () => {
     repository = new MemoryAssetRepository();
   });
 
-  it('loads seeded accounts when storage is empty', async () => {
+  it('loads seeded categories and accounts when storage is empty', async () => {
     const store = createAssetStore(repository);
 
     await store.load();
 
+    expect(store.state.categories.length).toBe(DEFAULT_CATEGORIES.length);
     expect(store.state.accounts.length).toBe(SEED_ACCOUNTS.length);
     expect(store.totalAsset.value).toBe(859355.75);
+  });
+
+  it('migrates older data that has accounts but no categories', async () => {
+    repository = new MemoryAssetRepository({
+      categories: [],
+      accounts: SEED_ACCOUNTS.slice(0, 1),
+      snapshots: [],
+      settings: DEFAULT_SETTINGS,
+    });
+    const store = createAssetStore(repository);
+
+    await store.load();
+
+    expect(store.state.categories.length).toBe(DEFAULT_CATEGORIES.length);
+    expect(store.state.accounts).toHaveLength(1);
   });
 
   it('falls back to seeded accounts when repository read fails', async () => {
@@ -33,8 +49,49 @@ describe('asset store', () => {
     await store.load();
 
     expect(store.state.loaded).toBe(true);
+    expect(store.state.categories.length).toBe(DEFAULT_CATEGORIES.length);
     expect(store.state.accounts.length).toBe(SEED_ACCOUNTS.length);
     expect(store.state.statusMessage).toBe('本地存储暂不可用，已载入示例数据');
+  });
+
+  it('creates a category and persists it', async () => {
+    const store = createAssetStore(repository, () => new Date('2026-05-21T10:00:00.000Z'));
+    await store.load();
+
+    await store.addCategory({ name: '借款', isNegative: true });
+
+    expect(store.state.categories.some((category) => category.name === '借款' && category.isNegative)).toBe(true);
+    expect((await repository.read()).categories.some((category) => category.name === '借款')).toBe(true);
+  });
+
+  it('updates category negative flag and total calculation follows the setting', async () => {
+    const store = createAssetStore(repository, () => new Date('2026-05-21T10:00:00.000Z'));
+    await store.load();
+
+    await store.addCategory({ name: '贷款', isNegative: true });
+    const loanCategory = store.state.categories.find((category) => category.name === '贷款');
+    expect(loanCategory).toBeDefined();
+    await store.addAccount({
+      name: '房贷',
+      category: loanCategory!.id,
+      balance: 100000,
+      includeInTotal: true,
+      note: '',
+    });
+
+    expect(store.totalAsset.value).toBe(759355.75);
+    await store.setDeductNegativeAssets(false);
+    expect(store.totalAsset.value).toBe(859355.75);
+  });
+
+  it('deactivates a category without deleting accounts', async () => {
+    const store = createAssetStore(repository);
+    await store.load();
+
+    await store.deactivateCategory('payment');
+
+    expect(store.state.categories.find((category) => category.id === 'payment')?.active).toBe(false);
+    expect(store.state.accounts.some((account) => account.category === 'payment')).toBe(true);
   });
 
   it('creates an account and persists it', async () => {
@@ -53,7 +110,7 @@ describe('asset store', () => {
     expect((await repository.read()).accounts.some((account) => account.name === '华泰证券')).toBe(true);
   });
 
-  it('saves balances and upserts today snapshot', async () => {
+  it('saves balances and upserts today snapshot with category metadata', async () => {
     const store = createAssetStore(repository, () => new Date('2026-05-21T10:00:00.000Z'));
     await store.load();
 
@@ -68,6 +125,7 @@ describe('asset store', () => {
 
     expect(store.state.snapshots).toHaveLength(1);
     expect(store.state.snapshots[0].date).toBe('2026-05-21');
+    expect(store.state.snapshots[0].categories.find((category) => category.id === 'liability')?.isNegative).toBe(true);
     expect(store.state.accounts.find((account) => account.id === 'alipay')?.balance).toBe(2500);
   });
 
@@ -89,6 +147,7 @@ describe('asset store', () => {
     const nextStore = createAssetStore(new MemoryAssetRepository());
     await nextStore.importBackup(backup);
 
+    expect(nextStore.state.categories).toHaveLength(DEFAULT_CATEGORIES.length);
     expect(nextStore.state.accounts).toHaveLength(SEED_ACCOUNTS.length);
     expect(nextStore.state.settings.lastBackupAt).toBe('2026-05-21T10:00:00.000Z');
   });
@@ -110,6 +169,7 @@ describe('asset store', () => {
 
     await store.clearAll();
 
+    expect(store.state.categories).toHaveLength(0);
     expect(store.state.accounts).toHaveLength(0);
     expect(store.state.snapshots).toHaveLength(0);
     expect(store.state.settings).toEqual(DEFAULT_SETTINGS);
@@ -118,6 +178,7 @@ describe('asset store', () => {
   it('imports a valid backup into repository', async () => {
     const store = createAssetStore(repository);
     const backup = createBackupJson({
+      categories: DEFAULT_CATEGORIES.slice(0, 1),
       accounts: SEED_ACCOUNTS.slice(0, 1),
       snapshots: [],
       settings: DEFAULT_SETTINGS,
@@ -127,6 +188,7 @@ describe('asset store', () => {
     const result = await store.importBackup(backup);
 
     expect(result.ok).toBe(true);
+    expect((await repository.read()).categories).toHaveLength(1);
     expect((await repository.read()).accounts).toHaveLength(1);
   });
 });

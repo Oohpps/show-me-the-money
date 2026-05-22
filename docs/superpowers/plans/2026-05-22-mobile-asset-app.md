@@ -53,7 +53,7 @@
 - Create: `src/domain/calculations.ts`
 
 - [ ] Write tests for total assets excluding non-total accounts and including negative liabilities.
-- [ ] Write tests for category totals grouped by fixed categories.
+- [ ] Write tests for category totals grouped by maintained categories.
 - [ ] Write tests for current-date snapshot upsert semantics.
 - [ ] Run tests and verify they fail because helpers are not implemented.
 - [ ] Implement the helpers.

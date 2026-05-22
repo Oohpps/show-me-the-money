@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { computed, reactive, watchEffect } from 'vue';
 import type { AssetStore } from '../composables/useAssetStore';
-import { CATEGORIES } from '../domain/categories';
 import { parseAmount } from '../domain/calculations';
 import type { CategoryId } from '../domain/types';
 
@@ -15,17 +14,29 @@ const emit = defineEmits<{
 
 const form = reactive({
   name: '',
-  category: 'bank' as CategoryId,
+  category: '' as CategoryId,
   balance: '',
   includeInTotal: true,
   note: '',
   error: '',
 });
 
+const activeCategories = computed(() => props.store.activeCategories.value);
+
+watchEffect(() => {
+  if (!form.category && activeCategories.value.length > 0) {
+    form.category = activeCategories.value[0].id;
+  }
+});
+
 const submit = async () => {
   const amount = parseAmount(form.balance);
   if (!form.name.trim()) {
     form.error = '请输入平台名称';
+    return;
+  }
+  if (!form.category) {
+    form.error = '请先选择或新增一个分类';
     return;
   }
   if (amount === null) {
@@ -50,13 +61,13 @@ const submit = async () => {
       <h2>新增平台</h2>
       <label class="field-row">
         <span>平台名称</span>
-        <input v-model="form.name" placeholder="例如：招商银行" />
+        <input v-model="form.name" placeholder="例如：支付宝、招商银行" />
       </label>
       <label class="field-row">
-        <span>分类</span>
+        <span>所属分类</span>
         <select v-model="form.category">
-          <option v-for="category in CATEGORIES" :key="category.id" :value="category.id">
-            {{ category.label }}
+          <option v-for="category in activeCategories" :key="category.id" :value="category.id">
+            {{ category.name }}{{ category.isNegative ? '（负资产）' : '' }}
           </option>
         </select>
       </label>
@@ -67,7 +78,7 @@ const submit = async () => {
       <label class="toggle-row">
         <span>
           <strong>计入总资产</strong>
-          <small>信用卡欠款可填负数</small>
+          <small>是否参与首页和趋势统计</small>
         </span>
         <input v-model="form.includeInTotal" type="checkbox" />
       </label>

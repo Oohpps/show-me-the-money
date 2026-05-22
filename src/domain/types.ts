@@ -1,16 +1,15 @@
-export type CategoryId =
-  | 'bank'
-  | 'payment'
-  | 'wealth'
-  | 'fund'
-  | 'stock'
-  | 'liability';
+export type CategoryId = string;
 
-export interface CategoryDefinition {
+export interface AssetCategory {
   id: CategoryId;
-  label: string;
-  shortLabel: string;
+  name: string;
+  shortName: string;
   icon: string;
+  isNegative: boolean;
+  active: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Account {
@@ -25,11 +24,19 @@ export interface Account {
   updatedAt: string;
 }
 
+export interface SnapshotCategory {
+  id: CategoryId;
+  name: string;
+  isNegative: boolean;
+}
+
 export interface DailySnapshot {
   date: string;
   totalAsset: number;
   categoryTotals: Record<CategoryId, number>;
   accountBalances: Record<string, number>;
+  categories: SnapshotCategory[];
+  deductNegativeAssets: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,15 +44,16 @@ export interface DailySnapshot {
 export interface AppSettings {
   currency: 'CNY';
   hideAmounts: boolean;
+  deductNegativeAssets: boolean;
   lastBackupAt: string | null;
   appVersion: string;
 }
 
 export interface BackupPayload {
-  schemaVersion: 1;
+  schemaVersion: 2;
   exportedAt: string;
+  categories: AssetCategory[];
   accounts: Account[];
   snapshots: DailySnapshot[];
   settings: AppSettings;
 }
-

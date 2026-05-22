@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { AssetStore } from '../composables/useAssetStore';
-import { CATEGORIES } from '../domain/categories';
 import { formatMoney } from '../domain/calculations';
 
 const props = defineProps<{
@@ -9,9 +8,9 @@ const props = defineProps<{
 }>();
 
 const rows = computed(() =>
-  CATEGORIES.map((category) => {
-    const total = props.store.categoryTotals.value[category.id];
-    const percent = props.store.totalAsset.value === 0 ? 0 : Math.max(0, (total / props.store.totalAsset.value) * 100);
+  props.store.state.categories.map((category) => {
+    const total = props.store.categoryTotals.value[category.id] ?? 0;
+    const percent = props.store.totalAsset.value === 0 ? 0 : Math.max(0, (Math.abs(total) / Math.abs(props.store.totalAsset.value)) * 100);
     return {
       category,
       total,
@@ -24,11 +23,11 @@ const rows = computed(() =>
 
 <template>
   <div class="page-stack">
-    <section v-for="row in rows" :key="row.category.id" class="stats-card">
+    <section v-for="row in rows" :key="row.category.id" class="stats-card" :class="{ inactive: !row.category.active }">
       <div class="stats-header">
         <div>
-          <h2>{{ row.category.label }}</h2>
-          <span>{{ row.accounts.length }} 个平台</span>
+          <h2>{{ row.category.name }}{{ row.category.isNegative ? '（负资产）' : '' }}</h2>
+          <span>{{ row.accounts.length }} 个平台{{ row.category.active ? '' : '，已停用' }}</span>
         </div>
         <strong>{{ formatMoney(row.total, store.state.settings.hideAmounts) }}</strong>
       </div>

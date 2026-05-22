@@ -27,6 +27,7 @@ const monthChange = computed(() =>
       :hidden="store.state.settings.hideAmounts"
     />
     <CategoryGrid
+      :categories="store.state.categories"
       :totals="store.categoryTotals.value"
       :accounts="store.state.accounts"
       :hidden="store.state.settings.hideAmounts"

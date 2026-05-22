@@ -1,13 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, SEED_ACCOUNTS } from './categories';
+import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS, SEED_ACCOUNTS } from './categories';
 import { buildDailySnapshot } from './calculations';
 import { createBackupJson, parseBackupJson } from './backup';
 
 describe('backup import and export', () => {
   it('creates a schema-versioned JSON backup', () => {
-    const snapshot = buildDailySnapshot(SEED_ACCOUNTS.slice(0, 2), '2026-05-21', '2026-05-21T08:00:00.000Z');
+    const snapshot = buildDailySnapshot(
+      SEED_ACCOUNTS.slice(0, 2),
+      DEFAULT_CATEGORIES,
+      true,
+      '2026-05-21',
+      '2026-05-21T08:00:00.000Z',
+    );
 
     const json = createBackupJson({
+      categories: DEFAULT_CATEGORIES,
       accounts: SEED_ACCOUNTS.slice(0, 2),
       snapshots: [snapshot],
       settings: DEFAULT_SETTINGS,
@@ -15,8 +22,9 @@ describe('backup import and export', () => {
     });
     const parsed = JSON.parse(json);
 
-    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.schemaVersion).toBe(2);
     expect(parsed.exportedAt).toBe('2026-05-21T10:00:00.000Z');
+    expect(parsed.categories).toHaveLength(DEFAULT_CATEGORIES.length);
     expect(parsed.accounts).toHaveLength(2);
     expect(parsed.snapshots).toHaveLength(1);
     expect(parsed.settings.currency).toBe('CNY');
@@ -24,6 +32,7 @@ describe('backup import and export', () => {
 
   it('parses a valid backup payload', () => {
     const json = createBackupJson({
+      categories: DEFAULT_CATEGORIES,
       accounts: SEED_ACCOUNTS.slice(0, 1),
       snapshots: [],
       settings: DEFAULT_SETTINGS,
@@ -34,6 +43,7 @@ describe('backup import and export', () => {
 
     expect(parsed.ok).toBe(true);
     expect(parsed.ok && parsed.data.accounts[0].name).toBe('招商银行');
+    expect(parsed.ok && parsed.data.categories[0].name).toBe('银行卡');
   });
 
   it('rejects invalid JSON without throwing', () => {
@@ -50,6 +60,7 @@ describe('backup import and export', () => {
       JSON.stringify({
         schemaVersion: 99,
         exportedAt: '2026-05-21T10:00:00.000Z',
+        categories: [],
         accounts: [],
         snapshots: [],
         settings: DEFAULT_SETTINGS,
@@ -65,7 +76,7 @@ describe('backup import and export', () => {
   it('rejects payloads missing required collections', () => {
     const parsed = parseBackupJson(
       JSON.stringify({
-        schemaVersion: 1,
+        schemaVersion: 2,
         exportedAt: '2026-05-21T10:00:00.000Z',
         accounts: [],
       }),
