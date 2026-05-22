@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, onUnmounted } from 'vue';
+import { computed, reactive, ref, onMounted, onUnmounted } from 'vue';
 import { App, type PluginListenerHandle } from '@capacitor/app';
 import type { AssetStore } from '../composables/useAssetStore';
 import { THEMES } from '../domain/themes';
@@ -23,42 +23,17 @@ let touchStartX = 0;
 let touchStartY = 0;
 let touchStartTime = 0;
 
-// 安卓物理返回按键与系统侧滑返回手势的监听句柄
+// 安卓物理返回按键与系统侧滑返回手势的长驻监听句柄
 let backButtonListener: PluginListenerHandle | null = null;
-
-// 动态注册 Android 物理返回按键/侧滑手势拦截器
-async function registerAndroidBack() {
-  if (backButtonListener) return; // 避免重复注册
-  try {
-    backButtonListener = await App.addListener('backButton', () => {
-      // 收到返回事件，直接执行后退到设置主页
-      goBack();
-    });
-  } catch (e) {
-    console.warn('Capacitor App 插件不可用，可能在非 App 环境运行', e);
-  }
-}
-
-// 动态注销 Android 返回键拦截器
-function unregisterAndroidBack() {
-  if (backButtonListener) {
-    backButtonListener.remove();
-    backButtonListener = null;
-  }
-}
 
 // 跳转到二级页面
 function navigateToSection(target: typeof section.value) {
   section.value = target;
-  // 只要离开设置主菜单进入二级页面，立即启用返回按键拦截，避免安卓右滑误退 App
-  registerAndroidBack();
 }
 
 // 统一的后退处理
 function goBack() {
   section.value = 'main';
-  // 返回到设置主菜单后，即时注销拦截器，恢复安卓原生退回桌面/退出 App 的默认行为
-  unregisterAndroidBack();
 }
 
 // 触摸手势开始
@@ -70,7 +45,7 @@ function onTouchStart(e: TouchEvent) {
   touchStartTime = Date.now();
 }
 
-// 触摸手势结束
+// 触摸手势结束 (作为界面内右滑返回的补充)
 function onTouchEnd(e: TouchEvent) {
   if (section.value === 'main') return;
   const touch = e.changedTouches[0];
@@ -88,9 +63,30 @@ function onTouchEnd(e: TouchEvent) {
   }
 }
 
+onMounted(async () => {
+  // 组件挂载时，创建唯一且长驻的安卓返回键监听器
+  try {
+    backButtonListener = await App.addListener('backButton', () => {
+      if (section.value !== 'main') {
+        // 情况 A：如果正处于二级页面，拦截并退回到设置主菜单
+        goBack();
+      } else {
+        // 情况 B：如果已经退回到了设置主菜单最后一页，再次按返回键直接退回到手机桌面！
+        // 这避开了浏览器 history.length 的干扰，200% 确定能成功退出 App！
+        App.exitApp();
+      }
+    });
+  } catch (e) {
+    console.warn('Capacitor App 插件不可用，可能在非 App 环境下运行', e);
+  }
+});
+
 onUnmounted(() => {
-  // 组件销毁时强制卸载拦截器，保障全局安卓返回逻辑的安全性
-  unregisterAndroidBack();
+  // 仅在组件卸载（如切换了 Tab）时销毁监听器，恢复系统全局的返回行为
+  if (backButtonListener) {
+    backButtonListener.remove();
+    backButtonListener = null;
+  }
 });
 
 const activeThemeName = computed(
@@ -146,7 +142,8 @@ const clearData = async () => {
 
 <template>
   <div class="page-stack" @touchstart="onTouchStart" @touchend="onTouchEnd">
-    <template v-if="section === 'main'">
+    <!-- 主设置面板 (长驻不销毁，作为无缝底图) -->
+    <div class="settings-main-panel">
       <section class="form-panel">
         <h2>统计设置</h2>
         <label class="toggle-row">
@@ -214,103 +211,151 @@ const clearData = async () => {
         <h2>危险操作</h2>
         <button class="secondary-action danger" type="button" @click="clearData">清空本地数据</button>
       </section>
-    </template>
+    </div>
 
-    <template v-else-if="section === 'categories'">
-      <section class="form-panel">
-        <div class="subpage-header">
-          <button type="button" class="tiny-action" @click="goBack()">返回</button>
-          <h2>分类管理</h2>
-        </div>
-
-        <div class="category-manage-list">
-          <div v-for="category in store.state.categories" :key="category.id" class="category-manage-row">
-            <div>
-              <strong>{{ category.name }}</strong>
-              <small>
-                {{ category.isNegative ? '负资产' : '正资产' }} ·
-                {{ category.active ? '启用中' : '已停用' }}
-              </small>
+    <!-- 二级页面滑入层 (绝对定位，立体滑入) -->
+    <Transition name="subpage-slide">
+      <div v-if="section !== 'main'" class="subpage-layer">
+        <!-- 分类管理 -->
+        <template v-if="section === 'categories'">
+          <section class="form-panel">
+            <div class="subpage-header">
+              <button type="button" class="tiny-action" @click="goBack()">返回</button>
+              <h2>分类管理</h2>
             </div>
-            <div class="row-actions">
-              <button type="button" class="tiny-action" @click="renameCategory(category.id, category.name)">改名</button>
+
+            <div class="category-manage-list">
+              <div v-for="category in store.state.categories" :key="category.id" class="category-manage-row">
+                <div>
+                  <strong>{{ category.name }}</strong>
+                  <small>
+                    {{ category.isNegative ? '负资产' : '正资产' }} ·
+                    {{ category.active ? '启用中' : '已停用' }}
+                  </small>
+                </div>
+                <div class="row-actions">
+                  <button type="button" class="tiny-action" @click="renameCategory(category.id, category.name)">改名</button>
+                  <button
+                    type="button"
+                    class="tiny-action"
+                    @click="store.updateCategory(category.id, { isNegative: !category.isNegative })"
+                  >
+                    {{ category.isNegative ? '设为正' : '设为负' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="tiny-action"
+                    @click="store.updateCategory(category.id, { active: !category.active })"
+                  >
+                    {{ category.active ? '停用' : '启用' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-panel">
+            <h2>新增分类</h2>
+            <label class="field-row">
+              <span>分类名称</span>
+              <input v-model="categoryForm.name" placeholder="例如：房贷、现金、保险" />
+            </label>
+            <label class="toggle-row">
+              <span>
+                <strong>标记为负资产</strong>
+                <small>例如信用卡、贷款、借款</small>
+              </span>
+              <input v-model="categoryForm.isNegative" type="checkbox" />
+            </label>
+            <p v-if="categoryForm.error" class="form-error">{{ categoryForm.error }}</p>
+            <button class="secondary-action" type="button" @click="addCategory">添加分类</button>
+          </section>
+        </template>
+
+        <!-- 配色设置 -->
+        <template v-else-if="section === 'themes'">
+          <section class="form-panel">
+            <div class="subpage-header">
+              <button type="button" class="tiny-action" @click="goBack()">返回</button>
+              <h2>配色设置</h2>
+            </div>
+            <div class="theme-grid">
               <button
+                v-for="theme in THEMES"
+                :key="theme.id"
                 type="button"
-                class="tiny-action"
-                @click="store.updateCategory(category.id, { isNegative: !category.isNegative })"
+                class="theme-card"
+                :class="{ active: store.state.settings.themeId === theme.id }"
+                @click="switchTheme(theme.id)"
               >
-                {{ category.isNegative ? '设为正' : '设为负' }}
-              </button>
-              <button
-                type="button"
-                class="tiny-action"
-                @click="store.updateCategory(category.id, { active: !category.active })"
-              >
-                {{ category.active ? '停用' : '启用' }}
+                <span class="theme-swatches">
+                  <i v-for="color in theme.colors" :key="color" class="theme-swatch" :style="{ background: color }" />
+                </span>
+                <span class="theme-meta">
+                  <strong>{{ theme.name }}</strong>
+                  <small>{{ theme.description }}</small>
+                </span>
               </button>
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
+        </template>
 
-      <section class="form-panel">
-        <h2>新增分类</h2>
-        <label class="field-row">
-          <span>分类名称</span>
-          <input v-model="categoryForm.name" placeholder="例如：房贷、现金、保险" />
-        </label>
-        <label class="toggle-row">
-          <span>
-            <strong>标记为负资产</strong>
-            <small>例如信用卡、贷款、借款</small>
-          </span>
-          <input v-model="categoryForm.isNegative" type="checkbox" />
-        </label>
-        <p v-if="categoryForm.error" class="form-error">{{ categoryForm.error }}</p>
-        <button class="secondary-action" type="button" @click="addCategory">添加分类</button>
-      </section>
-    </template>
-
-    <template v-else-if="section === 'themes'">
-      <section class="form-panel">
-        <div class="subpage-header">
-          <button type="button" class="tiny-action" @click="goBack()">返回</button>
-          <h2>配色设置</h2>
-        </div>
-        <div class="theme-grid">
-          <button
-            v-for="theme in THEMES"
-            :key="theme.id"
-            type="button"
-            class="theme-card"
-            :class="{ active: store.state.settings.themeId === theme.id }"
-            @click="switchTheme(theme.id)"
-          >
-            <span class="theme-swatches">
-              <i v-for="color in theme.colors" :key="color" class="theme-swatch" :style="{ background: color }" />
-            </span>
-            <span class="theme-meta">
-              <strong>{{ theme.name }}</strong>
-              <small>{{ theme.description }}</small>
-            </span>
-          </button>
-        </div>
-      </section>
-    </template>
-
-    <template v-else>
-      <section class="form-panel">
-        <div class="subpage-header">
-          <button type="button" class="tiny-action" @click="goBack()">返回</button>
-          <h2>备份恢复</h2>
-        </div>
-        <button class="secondary-action" type="button" @click="exportBackup">导出 JSON</button>
-        <textarea v-model="backupText" rows="7" readonly placeholder="导出的 JSON 会显示在这里" />
-        <textarea v-model="importText" rows="7" placeholder="粘贴 JSON 备份后导入" />
-        <button class="primary-action" type="button" @click="importBackup">导入 JSON</button>
-      </section>
-    </template>
+        <!-- 备份恢复 -->
+        <template v-else>
+          <section class="form-panel">
+            <div class="subpage-header">
+              <button type="button" class="tiny-action" @click="goBack()">返回</button>
+              <h2>备份恢复</h2>
+            </div>
+            <button class="secondary-action" type="button" @click="exportBackup">导出 JSON</button>
+            <textarea v-model="backupText" rows="7" readonly placeholder="导出的 JSON 会显示在这里" />
+            <textarea v-model="importText" rows="7" placeholder="粘贴 JSON 备份后导入" />
+            <button class="primary-action" type="button" @click="importBackup">导入 JSON</button>
+          </section>
+        </template>
+      </div>
+    </Transition>
 
     <p v-if="message" class="status-message">{{ message }}</p>
   </div>
 </template>
+
+<style scoped>
+/* 二级子页面绝对定位层，盖在主页上面 */
+.subpage-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  /* 内补丁与手机外壳保持完全一致，保证刘海屏和排版的一致性 */
+  padding: max(18px, env(safe-area-inset-top)) 18px calc(86px + env(safe-area-inset-bottom));
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  /* 左侧边缘阴影，凸显覆盖层级的物理质感 */
+  box-shadow: -6px 0 24px rgba(0, 0, 0, 0.12);
+  overflow-y: auto; /* 二级页面内容较多时允许自滚动 */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 拟真安卓官方减速缓动过渡动画 */
+.subpage-slide-enter-active,
+.subpage-slide-leave-active {
+  transition: transform 0.28s cubic-bezier(0.1, 0.9, 0.2, 1), opacity 0.28s linear;
+}
+
+.subpage-slide-enter-from,
+.subpage-slide-leave-to {
+  transform: translate3d(100%, 0, 0);
+  opacity: 0.9;
+}
+
+.subpage-slide-enter-to,
+.subpage-slide-leave-from {
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+}
+</style>

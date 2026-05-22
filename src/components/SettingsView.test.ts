@@ -14,7 +14,7 @@ describe('SettingsView', () => {
 
     expect(wrapper.text()).toContain('新增分类');
     expect(wrapper.text()).toContain('标记为负资产');
-    expect(wrapper.find('button.settings-menu-item').exists()).toBe(false);
+    expect(wrapper.find('.subpage-layer').exists()).toBe(true);
   });
 
   it('opens theme settings and switches the selected theme', async () => {
@@ -51,6 +51,6 @@ describe('SettingsView', () => {
 
     expect(wrapper.text()).toContain('导出 JSON');
     expect(wrapper.find('textarea[readonly]').exists()).toBe(true);
-    expect(wrapper.find('button.settings-menu-item').exists()).toBe(false);
+    expect(wrapper.find('.subpage-layer').exists()).toBe(true);
   });
 });
