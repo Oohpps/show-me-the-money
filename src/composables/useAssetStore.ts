@@ -90,6 +90,13 @@ export const createAssetStore = (
     state.settings = { ...DEFAULT_SETTINGS, ...data.settings };
   };
 
+  const zeroAccountBalances = (accounts: Account[]): Account[] =>
+    accounts.map((account) => ({
+      ...account,
+      balance: 0,
+      updatedAt: now().toISOString(),
+    }));
+
   const persist = async (): Promise<void> => {
     await repository.write({
       categories: state.categories,
@@ -303,12 +310,17 @@ export const createAssetStore = (
   };
 
   const clearAll = async (): Promise<void> => {
-    await repository.clear();
-    state.categories = [];
-    state.accounts = [];
-    state.snapshots = [];
+    replaceState(createSeededData());
     state.settings = { ...DEFAULT_SETTINGS };
+    state.statusMessage = '数据及结构已清空';
+    await persist();
+  };
+
+  const clearDataOnly = async (): Promise<void> => {
+    state.accounts = sortAccounts(zeroAccountBalances(state.accounts));
+    state.snapshots = [];
     state.statusMessage = '数据已清空';
+    await persist();
   };
 
   return {
@@ -332,6 +344,7 @@ export const createAssetStore = (
     exportBackup,
     importBackup,
     clearAll,
+    clearDataOnly,
   };
 };
 

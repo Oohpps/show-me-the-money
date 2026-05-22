@@ -18,6 +18,8 @@ const confirmDialog = ref<{
   description: string;
   confirmLabel: string;
   onConfirm: () => Promise<void>;
+  extraLabel?: string;
+  onExtra?: () => Promise<void>;
 } | null>(null);
 
 // Add Category Form
@@ -225,10 +227,14 @@ async function handleDeleteCategory(category: AssetCategory) {
   pushLayer(`settings-confirm-delete-category-${category.id}`);
 }
 
-async function confirmDialogAction() {
+async function confirmDialogAction(action: 'confirm' | 'extra' = 'confirm') {
   const current = confirmDialog.value;
   if (!current) return;
-  await current.onConfirm();
+  if (action === 'extra' && current.onExtra) {
+    await current.onExtra();
+  } else {
+    await current.onConfirm();
+  }
   requestBack();
 }
 
@@ -339,11 +345,16 @@ const switchTheme = async (themeId: (typeof THEMES)[number]['id']) => {
 const clearData = async () => {
   confirmDialog.value = {
     title: '清空本地数据？',
-    description: '所有资产记录和快照都会删除。',
-    confirmLabel: '清空',
+    description: '请选择清空范围。仅清空数据会保留当前分类和平台配置，只把金额与快照归零。',
+    confirmLabel: '仅清空数据',
     onConfirm: async () => {
+      await props.store.clearDataOnly();
+      message.value = '金额数据已清空';
+    },
+    extraLabel: '清空数据及结构',
+    onExtra: async () => {
       await props.store.clearAll();
-      message.value = '本地数据已清空';
+      message.value = '数据及结构已清空';
     },
   };
   pushLayer('settings-confirm-clear-data');
@@ -814,9 +825,17 @@ const clearData = async () => {
         <h3 class="modal-title">{{ confirmDialog.title }}</h3>
         <p class="confirm-desc">{{ confirmDialog.description }}</p>
 
-        <div class="modal-footer confirm-footer">
+        <div class="modal-footer confirm-footer" :class="{ 'has-extra-action': confirmDialog.onExtra }">
           <button type="button" class="secondary-action" @click="closeConfirmDialog">
             取消
+          </button>
+          <button
+            v-if="confirmDialog.onExtra"
+            type="button"
+            class="primary-action danger-action"
+            @click="confirmDialogAction('extra')"
+          >
+            {{ confirmDialog.extraLabel }}
           </button>
           <button type="button" class="primary-action danger-action" @click="confirmDialogAction">
             {{ confirmDialog.confirmLabel }}
@@ -1262,6 +1281,10 @@ const clearData = async () => {
 
 .confirm-footer {
   margin-top: 8px;
+}
+
+.confirm-footer.has-extra-action {
+  grid-template-columns: 1fr;
 }
 
 .danger-action {

@@ -11,14 +11,15 @@ describe('asset store', () => {
     repository = new MemoryAssetRepository();
   });
 
-  it('loads seeded categories and accounts when storage is empty', async () => {
+  it('loads default structure without default amounts when storage is empty', async () => {
     const store = createAssetStore(repository);
 
     await store.load();
 
     expect(store.state.categories.length).toBe(DEFAULT_CATEGORIES.length);
     expect(store.state.accounts.length).toBe(SEED_ACCOUNTS.length);
-    expect(store.totalAsset.value).toBe(195116.04);
+    expect(store.state.accounts.every((account) => account.balance === 0)).toBe(true);
+    expect(store.totalAsset.value).toBe(0);
   });
 
   it('migrates older data that has accounts but no categories', async () => {
@@ -36,7 +37,7 @@ describe('asset store', () => {
     expect(store.state.accounts).toHaveLength(1);
   });
 
-  it('falls back to seeded accounts when repository read fails', async () => {
+  it('falls back to default structure when repository read fails', async () => {
     const failingRepository = {
       read: async () => {
         throw new Error('indexeddb unavailable');
@@ -51,6 +52,7 @@ describe('asset store', () => {
     expect(store.state.loaded).toBe(true);
     expect(store.state.categories.length).toBe(DEFAULT_CATEGORIES.length);
     expect(store.state.accounts.length).toBe(SEED_ACCOUNTS.length);
+    expect(store.state.accounts.every((account) => account.balance === 0)).toBe(true);
     expect(store.state.statusMessage).toBe('本地存储暂不可用，已载入示例数据');
   });
 
@@ -79,9 +81,9 @@ describe('asset store', () => {
       note: '',
     });
 
-    expect(store.totalAsset.value).toBe(95116.04);
+    expect(store.totalAsset.value).toBe(-100000);
     await store.setDeductNegativeAssets(false);
-    expect(store.totalAsset.value).toBe(195116.04);
+    expect(store.totalAsset.value).toBe(0);
   });
 
   it('stores negative category balances as positive amounts and subtracts by category', async () => {
@@ -92,7 +94,7 @@ describe('asset store', () => {
 
     expect(store.state.accounts.find((account) => account.id === 'credit-card')?.balance).toBe(1200);
     expect(store.categoryTotals.value.liability).toBe(-1200);
-    expect(store.totalAsset.value).toBe(193916.04);
+    expect(store.totalAsset.value).toBe(-1200);
   });
 
   it('deactivates a category without deleting accounts', async () => {
@@ -196,16 +198,49 @@ describe('asset store', () => {
     expect(store.state.accounts).toHaveLength(beforeCount);
   });
 
-  it('clears local data', async () => {
+  it('clears data and structure back to default structure without amounts', async () => {
     const store = createAssetStore(repository);
     await store.load();
+    await store.addCategory({ name: '保险', isNegative: false });
+    await store.saveBalances({ alipay: 2000 });
 
     await store.clearAll();
 
-    expect(store.state.categories).toHaveLength(0);
-    expect(store.state.accounts).toHaveLength(0);
+    expect(store.state.categories).toHaveLength(DEFAULT_CATEGORIES.length);
+    expect(store.state.categories.some((category) => category.name === '保险')).toBe(false);
+    expect(store.state.accounts).toHaveLength(SEED_ACCOUNTS.length);
+    expect(store.state.accounts.every((account) => account.balance === 0)).toBe(true);
     expect(store.state.snapshots).toHaveLength(0);
     expect(store.state.settings).toEqual(DEFAULT_SETTINGS);
+    expect((await repository.read()).accounts.every((account) => account.balance === 0)).toBe(true);
+  });
+
+  it('clears data only while preserving categories and platform configuration', async () => {
+    const store = createAssetStore(repository);
+    await store.load();
+    await store.addCategory({ name: '保险', isNegative: false });
+    const insurance = store.state.categories.find((category) => category.name === '保险');
+    expect(insurance).toBeDefined();
+    await store.addAccount({
+      name: '年金账户',
+      category: insurance!.id,
+      balance: 888,
+      includeInTotal: false,
+      note: '自定义平台',
+    });
+    const annuityAccount = store.state.accounts.find((account) => account.name === '年金账户');
+    expect(annuityAccount).toBeDefined();
+    await store.saveBalances({ alipay: 2000, [annuityAccount!.id]: 999 });
+
+    await store.clearDataOnly();
+
+    expect(store.state.categories.some((category) => category.name === '保险')).toBe(true);
+    expect(store.state.accounts.some((account) => account.name === '年金账户' && !account.includeInTotal)).toBe(true);
+    expect(store.state.accounts.every((account) => account.balance === 0)).toBe(true);
+    expect(store.state.snapshots).toHaveLength(0);
+    const persisted = await repository.read();
+    expect(persisted.categories.some((category) => category.name === '保险')).toBe(true);
+    expect(persisted.accounts.every((account) => account.balance === 0)).toBe(true);
   });
 
   it('imports a valid backup into repository', async () => {

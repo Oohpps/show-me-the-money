@@ -1,7 +1,7 @@
 import type { Account, AppSettings, AssetCategory } from './types';
 import { DEFAULT_THEME_ID } from './themes';
 
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.1.1';
 
 const SEED_TIMESTAMP = '2026-05-20T08:00:00.000Z';
 

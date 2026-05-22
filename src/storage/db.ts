@@ -115,7 +115,7 @@ export class IndexedDbAssetRepository implements AssetRepository {
 
 export const createSeededData = (): AssetData => ({
   categories: DEFAULT_CATEGORIES.map((category) => ({ ...category })),
-  accounts: SEED_ACCOUNTS.map((account) => ({ ...account })),
+  accounts: SEED_ACCOUNTS.map((account) => ({ ...account, balance: 0 })),
   snapshots: [],
   settings: { ...DEFAULT_SETTINGS },
 });

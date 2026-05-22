@@ -2,7 +2,7 @@
 
 Personal offline asset dashboard app for side-loaded Android use.
 
-Current release: `1.1.0`.
+Current release: `1.1.1`.
 
 ## What It Does
 
@@ -43,17 +43,17 @@ npm.cmd run build
 
 ## Android Packaging
 
-The web app is Capacitor-ready. Android APK generation requires JDK 17 and Android SDK 35.
+The web app is Capacitor-ready. Android APK generation requires JDK 21 and Android SDK 35.
 
 This repository keeps generated SDK/JDK tools and APK files out of git:
 
 - `.local-tools/`
 - `release/*.apk`
 
-The local packaging setup used for `1.1.0` is:
+The local packaging setup used for `1.1.1` is:
 
 ```powershell
-$env:JAVA_HOME = "E:\show-me-the-money\.local-tools\openjdk17\jdk-17"
+$env:JAVA_HOME = "E:\show-me-the-money\.local-tools\openjdk21\jdk-21.0.11+10"
 $env:ANDROID_HOME = "E:\show-me-the-money\.local-tools\android-sdk"
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 $env:Path = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:Path"
@@ -84,10 +84,10 @@ The debug APK will be under:
 android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-For release `1.1.0`, the copied installable APK path is:
+For release `1.1.1`, the copied installable APK path is:
 
 ```text
-release/show-me-the-money-1.1.0-debug.apk
+release/show-me-the-money-1.1.1-debug.apk
 ```
 
 Install it on Android by enabling side-loading and opening the APK file on the phone.
