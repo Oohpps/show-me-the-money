@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, onUnmounted } from 'vue';
+import { App, type PluginListenerHandle } from '@capacitor/app';
 import type { AssetStore } from '../composables/useAssetStore';
 import { THEMES } from '../domain/themes';
 
@@ -15,6 +16,81 @@ const categoryForm = reactive({
   name: '',
   isNegative: false,
   error: '',
+});
+
+// 手势识别所需的临时变量
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+
+// 安卓物理返回按键与系统侧滑返回手势的监听句柄
+let backButtonListener: PluginListenerHandle | null = null;
+
+// 动态注册 Android 物理返回按键/侧滑手势拦截器
+async function registerAndroidBack() {
+  if (backButtonListener) return; // 避免重复注册
+  try {
+    backButtonListener = await App.addListener('backButton', () => {
+      // 收到返回事件，直接执行后退到设置主页
+      goBack();
+    });
+  } catch (e) {
+    console.warn('Capacitor App 插件不可用，可能在非 App 环境运行', e);
+  }
+}
+
+// 动态注销 Android 返回键拦截器
+function unregisterAndroidBack() {
+  if (backButtonListener) {
+    backButtonListener.remove();
+    backButtonListener = null;
+  }
+}
+
+// 跳转到二级页面
+function navigateToSection(target: typeof section.value) {
+  section.value = target;
+  // 只要离开设置主菜单进入二级页面，立即启用返回按键拦截，避免安卓右滑误退 App
+  registerAndroidBack();
+}
+
+// 统一的后退处理
+function goBack() {
+  section.value = 'main';
+  // 返回到设置主菜单后，即时注销拦截器，恢复安卓原生退回桌面/退出 App 的默认行为
+  unregisterAndroidBack();
+}
+
+// 触摸手势开始
+function onTouchStart(e: TouchEvent) {
+  if (section.value === 'main') return; // 仅在二级页面启用滑动返回
+  const touch = e.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  touchStartTime = Date.now();
+}
+
+// 触摸手势结束
+function onTouchEnd(e: TouchEvent) {
+  if (section.value === 'main') return;
+  const touch = e.changedTouches[0];
+  const deltaX = touch.clientX - touchStartX;
+  const deltaY = touch.clientY - touchStartY;
+  const duration = Date.now() - touchStartTime;
+
+  // 判定条件：
+  // 1. 起始触点处于左侧边缘区域 (startX < 80px)
+  // 2. 向右滑动距离超过 80px
+  // 3. 水平方向位移明显主导 (Math.abs(deltaY) < deltaX * 0.5)
+  // 4. 快速划过 (耗时小于 300ms)
+  if (touchStartX < 80 && deltaX > 80 && Math.abs(deltaY) < deltaX * 0.5 && duration < 300) {
+    goBack();
+  }
+}
+
+onUnmounted(() => {
+  // 组件销毁时强制卸载拦截器，保障全局安卓返回逻辑的安全性
+  unregisterAndroidBack();
 });
 
 const activeThemeName = computed(
@@ -69,7 +145,7 @@ const clearData = async () => {
 </script>
 
 <template>
-  <div class="page-stack">
+  <div class="page-stack" @touchstart="onTouchStart" @touchend="onTouchEnd">
     <template v-if="section === 'main'">
       <section class="form-panel">
         <h2>统计设置</h2>
@@ -89,14 +165,14 @@ const clearData = async () => {
       <section class="form-panel">
         <h2>资产配置</h2>
         <div class="settings-menu">
-          <button type="button" class="settings-menu-item" @click="section = 'categories'">
+          <button type="button" class="settings-menu-item" @click="navigateToSection('categories')">
             <span>
               <strong>分类管理</strong>
               <small>{{ store.state.categories.length }} 个分类，可增减、停用和标记负资产</small>
             </span>
             <b>›</b>
           </button>
-          <button type="button" class="settings-menu-item" @click="section = 'themes'">
+          <button type="button" class="settings-menu-item" @click="navigateToSection('themes')">
             <span>
               <strong>配色设置</strong>
               <small>当前：{{ activeThemeName }}</small>
@@ -124,7 +200,7 @@ const clearData = async () => {
       <section class="form-panel">
         <h2>备份恢复</h2>
         <div class="settings-menu">
-          <button type="button" class="settings-menu-item" @click="section = 'backup'">
+          <button type="button" class="settings-menu-item" @click="navigateToSection('backup')">
             <span>
               <strong>备份恢复</strong>
               <small>导出本地 JSON，或从备份 JSON 恢复数据</small>
@@ -143,7 +219,7 @@ const clearData = async () => {
     <template v-else-if="section === 'categories'">
       <section class="form-panel">
         <div class="subpage-header">
-          <button type="button" class="tiny-action" @click="section = 'main'">返回</button>
+          <button type="button" class="tiny-action" @click="goBack()">返回</button>
           <h2>分类管理</h2>
         </div>
 
@@ -198,7 +274,7 @@ const clearData = async () => {
     <template v-else-if="section === 'themes'">
       <section class="form-panel">
         <div class="subpage-header">
-          <button type="button" class="tiny-action" @click="section = 'main'">返回</button>
+          <button type="button" class="tiny-action" @click="goBack()">返回</button>
           <h2>配色设置</h2>
         </div>
         <div class="theme-grid">
@@ -225,7 +301,7 @@ const clearData = async () => {
     <template v-else>
       <section class="form-panel">
         <div class="subpage-header">
-          <button type="button" class="tiny-action" @click="section = 'main'">返回</button>
+          <button type="button" class="tiny-action" @click="goBack()">返回</button>
           <h2>备份恢复</h2>
         </div>
         <button class="secondary-action" type="button" @click="exportBackup">导出 JSON</button>
