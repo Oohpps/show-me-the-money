@@ -50,6 +50,17 @@ cd android
 .\gradlew assembleDebug
 ```
 
+If Maven Central or the Gradle plugin portal is unstable on the current network, use the repository mirror init script:
+
+```powershell
+$env:JAVA_HOME = "C:\Users\81566\.jdks\ms-17.0.16"
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+$env:ANDROID_HOME = "E:\Android\Sdk"
+$env:ANDROID_SDK_ROOT = "E:\Android\Sdk"
+cd android
+.\gradlew.bat --init-script maven-mirror.init.gradle assembleDebug
+```
+
 The debug APK will be under:
 
 ```text
