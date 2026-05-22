@@ -41,19 +41,36 @@ npm.cmd run build
 
 The web app is Capacitor-ready. Android APK generation requires Android Studio or Android SDK.
 
-After Android SDK is installed:
+Use JDK 21 for the local Gradle build. Newer JDKs can fail with errors such as `Unsupported class file major version 68`.
+
+On this machine, the working local paths are:
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-21.0.11.10-hotspot"
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+$env:ANDROID_HOME = "E:\Android\Sdk"
+$env:ANDROID_SDK_ROOT = "E:\Android\Sdk"
+```
+
+Create `android/local.properties` if it does not exist:
+
+```properties
+sdk.dir=E\:\\Android\\Sdk
+```
+
+Build the debug APK:
 
 ```powershell
 npm.cmd run build
-npx cap sync android
+npx.cmd cap sync android
 cd android
-.\gradlew assembleDebug
+.\gradlew.bat assembleDebug
 ```
 
 If Maven Central or the Gradle plugin portal is unstable on the current network, use the repository mirror init script:
 
 ```powershell
-$env:JAVA_HOME = "C:\Users\81566\.jdks\ms-17.0.16"
+$env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-21.0.11.10-hotspot"
 $env:Path = "$env:JAVA_HOME\bin;$env:Path"
 $env:ANDROID_HOME = "E:\Android\Sdk"
 $env:ANDROID_SDK_ROOT = "E:\Android\Sdk"
