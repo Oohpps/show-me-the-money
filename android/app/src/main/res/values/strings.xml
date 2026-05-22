@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Show Me The Money</string>
+    <string name="title_activity_main">Show Me The Money</string>
+    <string name="package_name">com.oohpps.showmethemoney</string>
+    <string name="custom_url_scheme">com.oohpps.showmethemoney</string>
+</resources>
