@@ -7,7 +7,7 @@ const props = defineProps<{
   store: AssetStore;
 }>();
 
-const section = ref<'main' | 'categories' | 'themes'>('main');
+const section = ref<'main' | 'categories' | 'themes' | 'backup'>('main');
 const backupText = ref('');
 const importText = ref('');
 const message = ref('');
@@ -123,10 +123,15 @@ const clearData = async () => {
 
       <section class="form-panel">
         <h2>备份恢复</h2>
-        <button class="secondary-action" type="button" @click="exportBackup">导出 JSON</button>
-        <textarea v-model="backupText" rows="7" readonly placeholder="导出的 JSON 会显示在这里" />
-        <textarea v-model="importText" rows="7" placeholder="粘贴 JSON 备份后导入" />
-        <button class="primary-action" type="button" @click="importBackup">导入 JSON</button>
+        <div class="settings-menu">
+          <button type="button" class="settings-menu-item" @click="section = 'backup'">
+            <span>
+              <strong>备份恢复</strong>
+              <small>导出本地 JSON，或从备份 JSON 恢复数据</small>
+            </span>
+            <b>›</b>
+          </button>
+        </div>
       </section>
 
       <section class="form-panel danger-panel">
@@ -190,7 +195,7 @@ const clearData = async () => {
       </section>
     </template>
 
-    <template v-else>
+    <template v-else-if="section === 'themes'">
       <section class="form-panel">
         <div class="subpage-header">
           <button type="button" class="tiny-action" @click="section = 'main'">返回</button>
@@ -214,6 +219,19 @@ const clearData = async () => {
             </span>
           </button>
         </div>
+      </section>
+    </template>
+
+    <template v-else>
+      <section class="form-panel">
+        <div class="subpage-header">
+          <button type="button" class="tiny-action" @click="section = 'main'">返回</button>
+          <h2>备份恢复</h2>
+        </div>
+        <button class="secondary-action" type="button" @click="exportBackup">导出 JSON</button>
+        <textarea v-model="backupText" rows="7" readonly placeholder="导出的 JSON 会显示在这里" />
+        <textarea v-model="importText" rows="7" placeholder="粘贴 JSON 备份后导入" />
+        <button class="primary-action" type="button" @click="importBackup">导入 JSON</button>
       </section>
     </template>
 

@@ -34,4 +34,23 @@ describe('SettingsView', () => {
 
     expect(store.state.settings.themeId).toBe('ocean');
   });
+
+  it('opens backup and restore as a secondary page', async () => {
+    const store = createAssetStore(new MemoryAssetRepository());
+    await store.load();
+    const wrapper = mount(SettingsView, { props: { store } });
+
+    expect(wrapper.text()).toContain('备份恢复');
+    expect(wrapper.text()).not.toContain('导出的 JSON 会显示在这里');
+
+    const backupItem = wrapper
+      .findAll('button.settings-menu-item')
+      .find((item) => item.text().includes('备份恢复'));
+    expect(backupItem).toBeDefined();
+    await backupItem!.trigger('click');
+
+    expect(wrapper.text()).toContain('导出 JSON');
+    expect(wrapper.find('textarea[readonly]').exists()).toBe(true);
+    expect(wrapper.find('button.settings-menu-item').exists()).toBe(false);
+  });
 });

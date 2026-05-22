@@ -194,6 +194,8 @@ textarea {
 
 button {
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 svg {
@@ -206,7 +208,7 @@ svg {
   max-width: 520px;
   min-height: 100vh;
   margin: 0 auto;
-  padding: max(18px, env(safe-area-inset-top)) 18px calc(104px + env(safe-area-inset-bottom));
+  padding: max(18px, env(safe-area-inset-top)) 18px calc(86px + env(safe-area-inset-bottom));
   overflow-x: hidden;
 }
 
@@ -267,6 +269,58 @@ svg {
   padding: 28px;
   color: var(--muted);
   text-align: center;
+}
+
+.auth-shell {
+  display: grid;
+  place-items: center;
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+
+.auth-panel {
+  display: grid;
+  width: 100%;
+  gap: 16px;
+  padding: 28px;
+  text-align: center;
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--soft-shadow);
+}
+
+.auth-mark {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  justify-self: center;
+  color: white;
+  border-radius: 22px;
+  background: var(--surface-deep);
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.auth-mark svg {
+  width: 32px;
+  height: 32px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.auth-panel h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.auth-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
 }
 
 .page-stack {
@@ -804,17 +858,17 @@ input[type="checkbox"] {
 .bottom-nav {
   position: fixed;
   right: 50%;
-  bottom: max(12px, env(safe-area-inset-bottom));
+  bottom: max(8px, env(safe-area-inset-bottom));
   z-index: 10;
   display: grid;
-  width: min(calc(100% - 28px), 492px);
+  width: min(calc(100% - 32px), 468px);
   grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
-  padding: 10px;
+  gap: 3px;
+  padding: 8px;
   border: 1px solid rgba(255, 255, 255, 0.78);
-  border-radius: 30px;
+  border-radius: 24px;
   background: var(--nav-bg);
-  box-shadow: 0 16px 44px color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--accent) 14%, transparent);
   transform: translateX(50%);
   backdrop-filter: blur(18px);
 }
@@ -822,13 +876,13 @@ input[type="checkbox"] {
 .nav-item {
   display: grid;
   min-width: 0;
-  min-height: 60px;
+  min-height: 50px;
   place-items: center;
   color: var(--muted);
   border: 0;
-  border-radius: 22px;
+  border-radius: 18px;
   background: transparent;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -839,14 +893,14 @@ input[type="checkbox"] {
 
 .nav-item.center {
   position: relative;
-  top: -26px;
-  width: 72px;
-  height: 72px;
+  top: -20px;
+  width: 58px;
+  height: 58px;
   justify-self: center;
   color: white;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 16px 34px color-mix(in srgb, var(--accent) 26%, transparent);
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 .nav-item.center span:last-child {
@@ -855,14 +909,14 @@ input[type="checkbox"] {
 
 .nav-icon {
   display: grid;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   place-items: center;
 }
 
 .nav-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2.2;
