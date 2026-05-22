@@ -15,7 +15,7 @@ const props = defineProps<{
 const activeTab = ref<TabId>('assets');
 const pageTitle = computed(() => {
   const titles: Record<TabId, string> = {
-    assets: '全家总资产',
+    assets: '资产总览',
     entry: '余额录入',
     add: '新增平台',
     stats: '分类统计',
