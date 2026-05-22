@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { AssetStore } from '../composables/useAssetStore';
-import AddAccountView from './AddAccountView.vue';
 import AssetsView from './AssetsView.vue';
 import BottomNav, { type TabId } from './BottomNav.vue';
 import EntryView from './EntryView.vue';
@@ -17,7 +16,6 @@ const pageTitle = computed(() => {
   const titles: Record<TabId, string> = {
     assets: '资产总览',
     entry: '余额录入',
-    add: '新增平台',
     stats: '分类统计',
     settings: '设置',
   };
@@ -58,7 +56,6 @@ const pageTitle = computed(() => {
     <template v-else>
       <AssetsView v-if="activeTab === 'assets'" :store="props.store" @open-stats="activeTab = 'stats'" />
       <EntryView v-else-if="activeTab === 'entry'" :store="props.store" @saved="activeTab = 'assets'" />
-      <AddAccountView v-else-if="activeTab === 'add'" :store="props.store" @created="activeTab = 'entry'" />
       <StatsView v-else-if="activeTab === 'stats'" :store="props.store" />
       <SettingsView v-else :store="props.store" />
     </template>

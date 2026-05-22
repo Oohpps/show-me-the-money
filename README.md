@@ -2,15 +2,19 @@
 
 Personal offline asset dashboard app for side-loaded Android use.
 
+Current release: `1.1.0`.
+
 ## What It Does
 
-- Tracks balances by custom category and platform, such as payment platforms > Alipay / WeChat.
-- Supports adding, renaming, enabling, disabling, and marking categories as negative assets.
+- Tracks balances by custom category and platform, such as bank cards, payment platforms, stocks, cash, and liabilities.
+- Uses a Bauhaus / neo-brutalist mobile UI with high-contrast blocks, hard borders, and large numeric hierarchy.
+- Supports category and platform management from Settings, including edit, delete, disable, and negative-asset categories.
 - Provides a setting to decide whether negative asset categories are deducted from total assets and snapshots.
-- Keeps category management and visual theme selection in secondary Settings pages.
-- Includes five selectable visual themes: classic gray, obsidian green, deep sea blue, moon purple gray, and cafe gold.
-- Saves one daily asset snapshot when balances are saved.
-- Shows total assets, editable category summaries, and asset trend charts.
+- Negative-asset balances are entered as positive numbers; subtraction is applied by category semantics.
+- Saves one daily asset snapshot for the selected entry date.
+- Shows total assets, category summaries, total trend details, category trend details, and platform trend charts.
+- Supports Android native back behavior for secondary and nested pages.
+- Includes five Bauhaus-compatible visual themes.
 - Supports amount hiding for privacy.
 - Exports and imports JSON backups.
 - Stores data locally with IndexedDB. There is no login, server, cloud sync, or automatic bank integration.
@@ -39,43 +43,39 @@ npm.cmd run build
 
 ## Android Packaging
 
-The web app is Capacitor-ready. Android APK generation requires Android Studio or Android SDK.
+The web app is Capacitor-ready. Android APK generation requires JDK 17 and Android SDK 35.
 
-Use JDK 21 for the local Gradle build. Newer JDKs can fail with errors such as `Unsupported class file major version 68`.
+This repository keeps generated SDK/JDK tools and APK files out of git:
 
-On this machine, the working local paths are:
+- `.local-tools/`
+- `release/*.apk`
+
+The local packaging setup used for `1.1.0` is:
 
 ```powershell
-$env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-21.0.11.10-hotspot"
-$env:Path = "$env:JAVA_HOME\bin;$env:Path"
-$env:ANDROID_HOME = "E:\Android\Sdk"
-$env:ANDROID_SDK_ROOT = "E:\Android\Sdk"
+$env:JAVA_HOME = "E:\show-me-the-money\.local-tools\openjdk17\jdk-17"
+$env:ANDROID_HOME = "E:\show-me-the-money\.local-tools\android-sdk"
+$env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
+$env:Path = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:Path"
 ```
 
-Create `android/local.properties` if it does not exist:
+Create `android/local.properties` if it does not exist. For this local SDK:
 
 ```properties
-sdk.dir=E\:\\Android\\Sdk
+sdk.dir=E\:\\show-me-the-money\\.local-tools\\android-sdk
 ```
 
-Build the debug APK:
+Build and sync Capacitor:
 
 ```powershell
-npm.cmd run build
-npx.cmd cap sync android
-cd android
-.\gradlew.bat assembleDebug
+npm.cmd run cap:sync
 ```
 
-If Maven Central or the Gradle plugin portal is unstable on the current network, use the repository mirror init script:
+Build the installable debug APK with the mirror init script:
 
 ```powershell
-$env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-21.0.11.10-hotspot"
-$env:Path = "$env:JAVA_HOME\bin;$env:Path"
-$env:ANDROID_HOME = "E:\Android\Sdk"
-$env:ANDROID_SDK_ROOT = "E:\Android\Sdk"
 cd android
-.\gradlew.bat --init-script maven-mirror.init.gradle assembleDebug
+.\gradlew.bat -I maven-mirror.init.gradle assembleDebug
 ```
 
 The debug APK will be under:
@@ -84,7 +84,13 @@ The debug APK will be under:
 android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Install it on the OnePlus 12 by enabling Android side-loading and opening the APK file on the phone.
+For release `1.1.0`, the copied installable APK path is:
+
+```text
+release/show-me-the-money-1.1.0-debug.apk
+```
+
+Install it on Android by enabling side-loading and opening the APK file on the phone.
 
 ## Backup And Restore
 

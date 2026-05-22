@@ -10,33 +10,33 @@ export interface ThemeOption {
 export const THEMES: readonly ThemeOption[] = [
   {
     id: 'classic',
-    name: '经典灰',
-    description: '最开始的暖灰资产面板，柔和克制。',
-    colors: ['#7D7871', '#F5F4F2', '#D6B56D', '#A7EAC7'],
+    name: '暖纸黄',
+    description: '柔和纸张底色，保留黄、蓝、红的经典几何对比。',
+    colors: ['#111111', '#F1EADF', '#F2C94C', '#184F9F'],
   },
   {
     id: 'obsidian',
-    name: '曜石绿',
-    description: '深墨绿 + 雾白 + 浅金点缀，高级稳重。',
-    colors: ['#0F2F2A', '#F3F6F2', '#D6B56D', '#6ED6A5'],
+    name: '包豪斯原色',
+    description: '当前使用的明黄、淡蓝、强红与黑色结构线。',
+    colors: ['#111111', '#F8F2E8', '#FFD21A', '#EF3328'],
   },
   {
     id: 'ocean',
     name: '深海蓝',
-    description: '深蓝黑 + 冰蓝 + 白色卡片，数字和图表更清晰。',
-    colors: ['#10233F', '#F5F8FC', '#7EB6FF', '#7DE2C3'],
+    description: '以浅蓝作为主色，图表和交互使用更深的蓝。',
+    colors: ['#111111', '#E4EDF4', '#8BD3FF', '#0057B8'],
   },
   {
     id: 'moon',
-    name: '月光紫灰',
-    description: '紫灰 + 银白 + 柔粉，精致但不花。',
-    colors: ['#3B3446', '#F7F4F8', '#C8A7E8', '#F2AFC2'],
+    name: '月光紫',
+    description: '紫色主块搭配蓝紫图表，负债仍保留醒目粉红。',
+    colors: ['#111111', '#EBE4EF', '#D8C3FF', '#6747D7'],
   },
   {
     id: 'cafe',
-    name: '暖白咖金',
-    description: '暖白 + 咖灰 + 金色，偏轻奢记账感。',
-    colors: ['#6B5C4B', '#FAF7F1', '#C79A45', '#A8D8B9'],
+    name: '咖金棕',
+    description: '偏温暖的金棕主色，适合更沉稳的资产面板。',
+    colors: ['#111111', '#EFE2CE', '#E7B84F', '#7A4F16'],
   },
 ] as const;
 

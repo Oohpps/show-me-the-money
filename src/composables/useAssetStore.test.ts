@@ -18,7 +18,7 @@ describe('asset store', () => {
 
     expect(store.state.categories.length).toBe(DEFAULT_CATEGORIES.length);
     expect(store.state.accounts.length).toBe(SEED_ACCOUNTS.length);
-    expect(store.totalAsset.value).toBe(859355.75);
+    expect(store.totalAsset.value).toBe(195116.04);
   });
 
   it('migrates older data that has accounts but no categories', async () => {
@@ -79,9 +79,20 @@ describe('asset store', () => {
       note: '',
     });
 
-    expect(store.totalAsset.value).toBe(759355.75);
+    expect(store.totalAsset.value).toBe(95116.04);
     await store.setDeductNegativeAssets(false);
-    expect(store.totalAsset.value).toBe(859355.75);
+    expect(store.totalAsset.value).toBe(195116.04);
+  });
+
+  it('stores negative category balances as positive amounts and subtracts by category', async () => {
+    const store = createAssetStore(repository, () => new Date('2026-05-21T10:00:00.000Z'));
+    await store.load();
+
+    await store.saveBalances({ 'credit-card': -1200 });
+
+    expect(store.state.accounts.find((account) => account.id === 'credit-card')?.balance).toBe(1200);
+    expect(store.categoryTotals.value.liability).toBe(-1200);
+    expect(store.totalAsset.value).toBe(193916.04);
   });
 
   it('deactivates a category without deleting accounts', async () => {
@@ -92,6 +103,8 @@ describe('asset store', () => {
 
     expect(store.state.categories.find((category) => category.id === 'payment')?.active).toBe(false);
     expect(store.state.accounts.some((account) => account.category === 'payment')).toBe(true);
+    expect(store.activeCategories.value.some((category) => category.id === 'payment')).toBe(false);
+    expect(store.categoryTotals.value.payment).toBe(0);
   });
 
   it('creates an account and persists it', async () => {
@@ -127,6 +140,16 @@ describe('asset store', () => {
     expect(store.state.snapshots[0].date).toBe('2026-05-21');
     expect(store.state.snapshots[0].categories.find((category) => category.id === 'liability')?.isNegative).toBe(true);
     expect(store.state.accounts.find((account) => account.id === 'alipay')?.balance).toBe(2500);
+  });
+
+  it('saves balances to the selected date', async () => {
+    const store = createAssetStore(repository, () => new Date('2026-05-21T10:00:00.000Z'));
+    await store.load();
+
+    await store.saveBalances({ alipay: 2000 }, '2026-05-19');
+
+    expect(store.state.snapshots[0].date).toBe('2026-05-19');
+    expect(store.state.snapshots[0].accountBalances.alipay).toBe(2000);
   });
 
   it('toggles hidden amount setting', async () => {
@@ -200,5 +223,50 @@ describe('asset store', () => {
     expect(result.ok).toBe(true);
     expect((await repository.read()).categories).toHaveLength(1);
     expect((await repository.read()).accounts).toHaveLength(1);
+  });
+
+  it('updates an account name and inclusion properties', async () => {
+    const store = createAssetStore(repository);
+    await store.load();
+    const account = store.state.accounts[0];
+    const initialId = account.id;
+
+    await store.updateAccount(initialId, {
+      name: '招商银行全新',
+      includeInTotal: false,
+      note: '修改后的备注',
+    });
+
+    const updated = store.state.accounts.find((a) => a.id === initialId);
+    expect(updated).toBeDefined();
+    expect(updated!.name).toBe('招商银行全新');
+    expect(updated!.includeInTotal).toBe(false);
+    expect(updated!.note).toBe('修改后的备注');
+  });
+
+  it('deletes an account correctly', async () => {
+    const store = createAssetStore(repository);
+    await store.load();
+    const initialCount = store.state.accounts.length;
+    const accountId = store.state.accounts[0].id;
+
+    await store.deleteAccount(accountId);
+
+    expect(store.state.accounts).toHaveLength(initialCount - 1);
+    expect(store.state.accounts.find((a) => a.id === accountId)).toBeUndefined();
+  });
+
+  it('deletes a category and cascades to accounts', async () => {
+    const store = createAssetStore(repository);
+    await store.load();
+
+    const CMB_ACCOUNT_ID = 'cmb-bank'; // belongs to category 'bank'
+    expect(store.state.categories.find((c) => c.id === 'bank')).toBeDefined();
+    expect(store.state.accounts.find((a) => a.id === CMB_ACCOUNT_ID)).toBeDefined();
+
+    await store.deleteCategory('bank');
+
+    expect(store.state.categories.find((c) => c.id === 'bank')).toBeUndefined();
+    expect(store.state.accounts.find((a) => a.id === CMB_ACCOUNT_ID)).toBeUndefined();
   });
 });

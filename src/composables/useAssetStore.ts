@@ -58,6 +58,11 @@ const makeId = (name: string, timestamp: number): string => {
 
 const makeShortName = (name: string): string => name.trim().slice(0, 2) || '分类';
 
+const normalizeAccountBalance = (
+  balance: number,
+  category: AssetCategory | undefined,
+): number => (category?.isNegative ? Math.abs(balance) : balance);
+
 const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
   new Promise<T>((resolve, reject) => {
     const timeout = window.setTimeout(() => reject(new Error('storage read timeout')), timeoutMs);
@@ -166,11 +171,12 @@ export const createAssetStore = (
 
   const addAccount = async (input: NewAccountInput): Promise<void> => {
     const timestamp = now().toISOString();
+    const category = state.categories.find((item) => item.id === input.category);
     const account: Account = {
       id: makeId(input.name, now().getTime()),
       name: input.name.trim(),
       category: input.category,
-      balance: input.balance,
+      balance: normalizeAccountBalance(input.balance, category),
       includeInTotal: input.includeInTotal,
       note: input.note.trim(),
       sortOrder: state.accounts.length ? Math.max(...state.accounts.map((item) => item.sortOrder)) + 10 : 10,
@@ -183,18 +189,58 @@ export const createAssetStore = (
     await persist();
   };
 
-  const saveBalances = async (balances: Record<string, number>): Promise<void> => {
+  const updateAccount = async (
+    accountId: string,
+    patch: Partial<Pick<Account, 'name' | 'category' | 'includeInTotal' | 'note' | 'sortOrder'>>,
+  ): Promise<void> => {
+    const timestamp = now().toISOString();
+    state.accounts = sortAccounts(
+      state.accounts.map((account) =>
+        account.id === accountId
+          ? {
+              ...account,
+              ...patch,
+              updatedAt: timestamp,
+            }
+          : account,
+      ),
+    );
+    state.statusMessage = '平台已更新';
+    await persist();
+  };
+
+  const deleteAccount = async (accountId: string): Promise<void> => {
+    state.accounts = state.accounts.filter((account) => account.id !== accountId);
+    state.statusMessage = '平台已删除';
+    await persist();
+  };
+
+  const deleteCategory = async (categoryId: CategoryId): Promise<void> => {
+    state.categories = state.categories.filter((c) => c.id !== categoryId);
+    state.accounts = state.accounts.filter((a) => a.category !== categoryId);
+    state.statusMessage = '分类已删除';
+    await persist();
+  };
+
+  const saveBalances = async (balances: Record<string, number>, date = getDateKey(now())): Promise<void> => {
     const timestamp = now().toISOString();
     state.accounts = state.accounts.map((account) =>
       Object.prototype.hasOwnProperty.call(balances, account.id)
-        ? { ...account, balance: balances[account.id], updatedAt: timestamp }
+        ? {
+            ...account,
+            balance: normalizeAccountBalance(
+              balances[account.id],
+              state.categories.find((category) => category.id === account.category),
+            ),
+            updatedAt: timestamp,
+          }
         : account,
     );
     const snapshot = buildDailySnapshot(
       state.accounts,
       state.categories,
       state.settings.deductNegativeAssets,
-      getDateKey(now()),
+      date,
       timestamp,
     );
     state.snapshots = upsertSnapshot(state.snapshots, snapshot);
@@ -275,7 +321,10 @@ export const createAssetStore = (
     addCategory,
     updateCategory,
     deactivateCategory,
+    deleteCategory,
     addAccount,
+    updateAccount,
+    deleteAccount,
     saveBalances,
     setHideAmounts,
     setDeductNegativeAssets,

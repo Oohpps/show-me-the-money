@@ -3,18 +3,29 @@ import { computed, ref, watch } from 'vue';
 import { formatMoney, getVisibleTrendSnapshots } from '../domain/calculations';
 import type { DailySnapshot } from '../domain/types';
 
+interface TrendPoint {
+  date: string;
+  value: number;
+}
+
 const props = defineProps<{
-  snapshots: DailySnapshot[];
+  snapshots?: DailySnapshot[];
+  points?: TrendPoint[];
   currentTotal: number;
   hidden: boolean;
+  title?: string;
+  emptyText?: string;
 }>();
 
 const windowSize = ref(8);
-const maxWindowSize = computed(() => Math.max(1, props.snapshots.length));
-const visibleSnapshots = computed(() => getVisibleTrendSnapshots(props.snapshots, windowSize.value));
+const sourcePoints = computed<TrendPoint[]>(() =>
+  props.points ?? (props.snapshots ?? []).map((snapshot) => ({ date: snapshot.date, value: snapshot.totalAsset })),
+);
+const maxWindowSize = computed(() => Math.max(1, sourcePoints.value.length));
+const visiblePoints = computed(() => getVisibleTrendSnapshots(sourcePoints.value, windowSize.value));
 
 watch(
-  () => props.snapshots.length,
+  () => sourcePoints.value.length,
   (length) => {
     windowSize.value = Math.max(1, Math.min(windowSize.value, length || 1));
   },
@@ -30,9 +41,7 @@ const zoomOut = () => {
 };
 
 const chartPoints = computed(() => {
-  const points = visibleSnapshots.value.length
-    ? visibleSnapshots.value.map((snapshot) => ({ date: snapshot.date, value: snapshot.totalAsset }))
-    : [{ date: '当前', value: props.currentTotal }];
+  const points = visiblePoints.value.length ? visiblePoints.value : [{ date: '当前', value: props.currentTotal }];
   const values = points.map((point) => point.value);
   const min = Math.min(...values, props.currentTotal);
   const max = Math.max(...values, props.currentTotal);
@@ -50,9 +59,9 @@ const area = computed(() => `0,100 ${polyline.value} 100,100`);
 </script>
 
 <template>
-  <section class="section-block trend-block">
+  <section class="section-block trend-block" :class="{ 'is-empty': sourcePoints.length === 0 }">
     <div class="section-title-row">
-      <h2>资产趋势图</h2>
+      <h2>{{ title ?? '资产趋势图' }}</h2>
       <div class="zoom-controls" aria-label="趋势图缩放">
         <button type="button" :disabled="windowSize <= 1" aria-label="放大范围" @click="zoomIn">+</button>
         <button type="button" :disabled="windowSize >= maxWindowSize" aria-label="缩小范围" @click="zoomOut">-</button>
@@ -60,13 +69,13 @@ const area = computed(() => `0,100 ${polyline.value} 100,100`);
     </div>
 
     <label class="range-control">
-      <span>{{ snapshots.length ? `最近 ${windowSize} 次录入 / 共 ${snapshots.length} 次` : '暂无录入快照' }}</span>
+      <span>{{ sourcePoints.length ? `最近 ${windowSize} 次录入 / 共 ${sourcePoints.length} 次` : (emptyText ?? '暂无录入快照') }}</span>
       <input
         v-model.number="windowSize"
         type="range"
         :min="1"
         :max="maxWindowSize"
-        :disabled="snapshots.length <= 1"
+        :disabled="sourcePoints.length <= 1"
       />
     </label>
 

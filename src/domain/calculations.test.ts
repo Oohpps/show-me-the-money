@@ -51,15 +51,28 @@ describe('asset calculations', () => {
       baseAccount({ id: 'bank-b', category: 'bank', balance: 200 }),
       baseAccount({ id: 'alipay', category: 'payment', balance: 88.5 }),
       baseAccount({ id: 'card', category: 'liability', balance: 30 }),
-      baseAccount({ id: 'hidden', category: 'fund', balance: 900, includeInTotal: false }),
+      baseAccount({ id: 'hidden', category: 'cash', balance: 900, includeInTotal: false }),
     ];
 
     expect(calculateCategoryTotals(accounts, categories, true)).toMatchObject({
       bank: 1200,
       payment: 88.5,
-      fund: 0,
+      cash: 0,
       liability: -30,
     });
+  });
+
+  it('excludes inactive categories from totals', () => {
+    const inactiveCategories = categories.map((category) =>
+      category.id === 'payment' ? { ...category, active: false } : category,
+    );
+    const accounts = [
+      baseAccount({ id: 'bank', category: 'bank', balance: 1000 }),
+      baseAccount({ id: 'alipay', category: 'payment', balance: 500 }),
+    ];
+
+    expect(calculateTotalAsset(accounts, inactiveCategories, true)).toBe(1000);
+    expect(calculateCategoryTotals(accounts, inactiveCategories, true).payment).toBe(0);
   });
 
   it('builds one daily snapshot with category metadata and settings', () => {
@@ -86,7 +99,7 @@ describe('asset calculations', () => {
       },
     });
     expect(snapshot.categories.find((category) => category.id === 'liability')).toMatchObject({
-      name: '信用卡/负债',
+      name: '负债',
       isNegative: true,
     });
   });

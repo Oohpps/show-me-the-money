@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the first usable Vue 3 + TypeScript personal asset dashboard app with local persistence, dashboard, entry, add, stats, settings, tests, and Capacitor-ready packaging.
+**Goal:** Build the first usable Vue 3 + TypeScript personal asset dashboard app with local persistence, dashboard, dated entry, stats, settings, tests, Android native back support, and Capacitor APK packaging.
 
 **Architecture:** The app is a Vite SPA with small Vue components, pure TypeScript domain helpers, and an IndexedDB-backed repository. UI state lives in a single composable store so pages can share accounts, snapshots, settings, and import/export flows without a server.
 
@@ -17,7 +17,7 @@
 - `src/main.ts`, `src/App.vue`: app boot and shell composition.
 - `src/styles.css`: app-wide mobile design tokens and responsive layout.
 - `src/domain/types.ts`: category, account, snapshot, settings, backup types.
-- `src/domain/categories.ts`: fixed category metadata and seeded platform data.
+- `src/domain/categories.ts`: default category metadata, seeded platform data, and app version.
 - `src/domain/calculations.ts`: pure asset total, category total, snapshot, trend, format, and validation helpers.
 - `src/domain/backup.ts`: backup export/import validation helpers.
 - `src/storage/db.ts`: IndexedDB adapter and fallback seed loading.
@@ -95,7 +95,7 @@
 - Create: `src/components/CategoryGrid.vue`
 - Create: `src/components/TrendChart.vue`
 
-- [ ] Implement the five-tab mobile shell: Assets, Entry, Add, Stats, Settings.
+- [ ] Implement the four-tab mobile shell: Assets, Entry, Stats, Settings.
 - [ ] Build the Assets page with total card, category cards, trend switch, and masked amount support.
 - [ ] Use code-native SVG icons and CSS chart rendering.
 - [ ] Keep the first viewport optimized for OnePlus 12 portrait proportions.
@@ -104,14 +104,13 @@
 
 **Files:**
 - Create: `src/components/EntryView.vue`
-- Create: `src/components/AddAccountView.vue`
 - Create: `src/components/StatsView.vue`
 - Create: `src/components/SettingsView.vue`
 - Create: `src/components/AmountInput.vue`
 
-- [ ] Implement batch balance editing and save feedback.
-- [ ] Implement account creation with fixed category select and include-in-total switch.
-- [ ] Implement category statistics with proportion bars and platform details.
+- [ ] Implement dated batch balance editing and save feedback.
+- [ ] Implement category and platform management from Settings.
+- [ ] Implement total/category statistics with secondary trend detail pages.
 - [ ] Implement settings actions for hiding amounts, export JSON, import JSON, and clear data confirmation.
 
 ## Task 7: Capacitor And Documentation
@@ -123,7 +122,7 @@
 
 - [ ] Add Capacitor config with app id `com.oohpps.showmethemoney`.
 - [ ] Add Android packaging commands to README.
-- [ ] Document that final APK build requires Android SDK/Android Studio.
+- [ ] Document Android packaging with JDK 17, Android SDK 35, Gradle mirror usage, and APK output path.
 - [ ] Run `npm.cmd run build`.
 
 ## Task 8: Browser Verification And Final Commit

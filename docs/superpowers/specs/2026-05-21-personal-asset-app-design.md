@@ -6,7 +6,7 @@ Date: 2026-05-21
 
 Build a private Android app for a OnePlus 12 that summarizes personal assets by platform and category. The app is for side-loaded personal use only. It does not need app store publishing, login, cloud sync, or transaction-level bookkeeping.
 
-The first version records platform balances, such as Alipay, WeChat, China Merchants Bank, fund platforms, and stock accounts. Each save creates or updates a daily balance snapshot so the app can show asset trends without recording every transaction.
+The current version records platform balances, such as Alipay, WeChat, China Merchants Bank, stock accounts, cash, and liabilities. Each save creates or updates a daily balance snapshot for the selected entry date so the app can show asset trends without recording every transaction.
 
 ## Technical Direction
 
@@ -18,18 +18,19 @@ Use Vue 3, TypeScript, Vite, and Capacitor.
 - IndexedDB stores all user data locally on the phone.
 - JSON export and import provide backup and restore.
 
-The project will first be verified in a browser. After the UI and local data behavior are accepted, Capacitor Android packaging can produce a debug APK. The current machine does not have Android SDK detected, so final APK generation requires Android Studio or Android SDK installation before running the Android build.
+The project is verified in a browser and packaged with Capacitor Android. The local packaging environment can use a project-local OpenJDK 17 and Android SDK 35 under `.local-tools/`, with generated APK files copied under `release/`.
 
 ## Product Scope
 
 Included in version 1:
 
 - Asset dashboard with total assets, change summary, category cards, and trend chart.
-- Platform balance entry with both single-platform edit and batch entry.
+- Platform balance entry with a custom date selector and grouped batch entry.
 - Custom asset categories and custom platform accounts under those categories.
 - Category statistics with totals, percentages, and platform details.
-- Trend details based on actual saved balance snapshots, with manual zoom range controls.
+- Total, category, and platform trend details based on actual saved balance snapshots, with manual zoom range controls.
 - Settings for category management, deducting negative assets, JSON export, JSON import, amount hiding, and data clearing.
+- Android native back behavior for secondary and nested pages.
 - Local-only storage and offline use.
 
 Not included in version 1:
@@ -43,11 +44,10 @@ Not included in version 1:
 
 ## Navigation
 
-The app uses a five-item bottom navigation:
+The app uses a four-item bottom navigation:
 
 - Assets: main dashboard.
 - Entry: batch balance entry.
-- Add: center prominent add button for new platforms.
 - Stats: category statistics.
 - Settings: backup, restore, privacy display, and app settings.
 
@@ -83,31 +83,23 @@ It shows platforms grouped by category. Each platform row includes:
 - Current balance input.
 - Optional note.
 
-Saving updates platform balances and creates a snapshot for the current date. If a snapshot already exists for the current date, saving replaces that snapshot instead of creating a duplicate trend point.
-
-### Add
-
-The Add flow creates a new platform account.
-
-Fields:
-
-- Platform name.
-- User-maintained category.
-- Initial balance.
-- Include in total.
-- Optional note.
+Saving updates platform balances and creates a snapshot for the selected date. If a snapshot already exists for that date, saving replaces that snapshot instead of creating a duplicate trend point.
 
 Negative asset behavior is controlled at the category level. A category such as credit cards, loans, or borrowing can be marked as negative. When the "deduct negative assets" setting is enabled, those category balances reduce total assets and snapshot totals.
 
+Negative asset balances are entered as positive numbers. The app stores them as positive balances and applies subtraction only when calculating totals for negative categories.
+
 ### Stats
 
-The Stats page shows category-level totals.
+The Stats page shows total and category-level summaries.
 
 It should prioritize readable mobile lists and horizontal proportion bars over complex charts. Each category section shows:
 
-- Category total.
-- Share of total assets.
+- Total assets as a numeric summary card.
+- Category total and share of total assets.
 - Platform breakdown.
+- A secondary detail page for total trend.
+- A secondary detail page for each category, including category aggregate trend and platform-level trends.
 
 ### Settings
 
@@ -134,10 +126,9 @@ Both levels are user-maintained. The app ships with default categories:
 
 - Bank Cards
 - Payment Platforms
-- Wealth Management
-- Funds
 - Stocks
-- Credit Cards and Liabilities
+- Cash
+- Liabilities
 
 Each category has an `isNegative` flag. When `isNegative` is true, the category is treated as a negative asset category. The global `deductNegativeAssets` setting controls whether those balances reduce dashboard totals and snapshot totals.
 
@@ -213,17 +204,13 @@ Import checks `schemaVersion` and required fields before replacing local Indexed
 
 ## Visual Direction
 
-The UI should reference the provided asset-summary screenshot but not copy its mini-program shell.
+The UI uses a Bauhaus and neo-brutalist visual system:
 
-Direction:
-
-- Obsidian green and mist-white surfaces.
-- Light gray or white page background.
-- Mint green for gains, muted pink for warning and negative emphasis, and subtle gold highlights.
+- High-saturation Bauhaus blocks such as yellow, red, and pale blue.
+- Heavy black borders, square corners, and hard offset shadows.
 - Large bold numeric hierarchy for money.
-- Two-column category cards on the dashboard.
-- Area line chart for asset trend.
-- Fixed bottom navigation with a raised center add button.
+- Semantic color: positive assets use bright active tones, liabilities use red warning blocks.
+- Four-item floating bottom navigation.
 - Stable masked amount widths to avoid layout jumps.
 
 The interface should feel like a quiet personal finance dashboard, not a marketing landing page.
@@ -267,7 +254,7 @@ Functional checks:
 - Add a platform and see it on dashboard, entry, and stats pages.
 - Batch edit balances and verify total asset recalculation.
 - Save twice on the same date and verify only one daily snapshot exists.
-- Add negative liability balance and verify it reduces total assets.
+- Add a positive liability balance and verify the negative category reduces total assets when deduction is enabled.
 - Toggle amount hiding and verify values are masked consistently.
 - Export JSON and import it into a clean local state.
 - Reject invalid JSON without data loss.
@@ -284,7 +271,7 @@ Build checks:
 
 - `npm.cmd run build`
 - Capacitor sync after web build.
-- Android debug APK build after Android SDK is installed.
+- Android debug APK build with JDK 17 and Android SDK 35.
 
 ## Delivery
 
@@ -293,5 +280,5 @@ Expected deliverables:
 - Source project.
 - Browser-previewable Vue app.
 - Capacitor Android project.
-- Debug APK once Android SDK is available.
+- Installable debug APK, e.g. `release/show-me-the-money-1.1.0-debug.apk`.
 - Short usage and build instructions.

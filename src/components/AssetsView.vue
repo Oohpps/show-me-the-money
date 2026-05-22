@@ -4,7 +4,6 @@ import type { AssetStore } from '../composables/useAssetStore';
 import { getSnapshotChange } from '../domain/calculations';
 import AssetSummaryCard from './AssetSummaryCard.vue';
 import CategoryGrid from './CategoryGrid.vue';
-import TrendChart from './TrendChart.vue';
 
 const props = defineProps<{
   store: AssetStore;
@@ -25,18 +24,15 @@ const monthChange = computed(() =>
       :total="store.totalAsset.value"
       :change="monthChange"
       :hidden="store.state.settings.hideAmounts"
+      :snapshots="store.visibleSnapshots.value"
+      @open-stats="$emit('openStats')"
     />
     <CategoryGrid
-      :categories="store.state.categories"
+      :categories="store.activeCategories.value"
       :totals="store.categoryTotals.value"
       :accounts="store.state.accounts"
       :hidden="store.state.settings.hideAmounts"
       @open="$emit('openStats')"
-    />
-    <TrendChart
-      :snapshots="store.visibleSnapshots.value"
-      :current-total="store.totalAsset.value"
-      :hidden="store.state.settings.hideAmounts"
     />
   </div>
 </template>

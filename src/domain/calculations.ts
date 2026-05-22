@@ -30,6 +30,11 @@ const normalizeAmountForTotal = (
   return -Math.abs(amount);
 };
 
+const shouldIncludeAccountInTotal = (
+  account: Account,
+  category: AssetCategory | undefined,
+): category is AssetCategory => account.includeInTotal && Boolean(category?.active);
+
 export const calculateTotalAsset = (
   accounts: Account[],
   categories: AssetCategory[],
@@ -39,7 +44,7 @@ export const calculateTotalAsset = (
 
   return roundMoney(
     accounts
-      .filter((account) => account.includeInTotal)
+      .filter((account) => shouldIncludeAccountInTotal(account, categoryMap.get(account.category)))
       .reduce(
         (total, account) =>
           total + normalizeAmountForTotal(account.balance, categoryMap.get(account.category), deductNegativeAssets),
@@ -57,10 +62,11 @@ export const calculateCategoryTotals = (
   const categoryMap = new Map(categories.map((category) => [category.id, category]));
 
   for (const account of accounts) {
-    if (account.includeInTotal && account.category in totals) {
+    const category = categoryMap.get(account.category);
+    if (shouldIncludeAccountInTotal(account, category) && account.category in totals) {
       totals[account.category] = roundMoney(
         totals[account.category] +
-          normalizeAmountForTotal(account.balance, categoryMap.get(account.category), deductNegativeAssets),
+          normalizeAmountForTotal(account.balance, category, deductNegativeAssets),
       );
     }
   }
@@ -79,7 +85,8 @@ export const buildDailySnapshot = (
   totalAsset: calculateTotalAsset(accounts, categories, deductNegativeAssets),
   categoryTotals: calculateCategoryTotals(accounts, categories, deductNegativeAssets),
   accountBalances: accounts.reduce<Record<string, number>>((balances, account) => {
-    if (account.includeInTotal) {
+    const category = categories.find((item) => item.id === account.category);
+    if (shouldIncludeAccountInTotal(account, category)) {
       balances[account.id] = account.balance;
     }
     return balances;
@@ -144,10 +151,10 @@ export const getSnapshotChange = (snapshots: DailySnapshot[]): number => {
   return roundMoney(sorted[sorted.length - 1].totalAsset - sorted[sorted.length - 2].totalAsset);
 };
 
-export const getVisibleTrendSnapshots = (
-  snapshots: DailySnapshot[],
+export const getVisibleTrendSnapshots = <T extends { date: string }>(
+  snapshots: T[],
   windowSize: number,
-): DailySnapshot[] => {
+): T[] => {
   const sorted = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
   return sorted.slice(Math.max(0, sorted.length - Math.max(1, windowSize)));
 };

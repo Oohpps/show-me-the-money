@@ -7,3 +7,5 @@ dist/
 android/.gradle/
 android/app/build/
 android/build/
+.local-tools/
+release/*.apk
