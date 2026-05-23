@@ -13,6 +13,8 @@ const section = ref<'main' | 'categories' | 'themes' | 'backup'>('main');
 const backupText = ref('');
 const importText = ref('');
 const message = ref('');
+const backupTextarea = ref<HTMLTextAreaElement | null>(null);
+const importFileInput = ref<HTMLInputElement | null>(null);
 const confirmDialog = ref<{
   title: string;
   description: string;
@@ -153,9 +155,72 @@ const exportBackup = async () => {
   message.value = '备份 JSON 已生成';
 };
 
+const ensureBackupText = async (): Promise<string> => {
+  if (!backupText.value) {
+    backupText.value = await props.store.exportBackup();
+  }
+  return backupText.value;
+};
+
+const selectBackupText = async () => {
+  await ensureBackupText();
+  backupTextarea.value?.focus();
+  backupTextarea.value?.select();
+  message.value = '已全选导出 JSON';
+};
+
+const copyBackupText = async () => {
+  const text = await ensureBackupText();
+  try {
+    await navigator.clipboard.writeText(text);
+    message.value = '导出 JSON 已复制';
+  } catch {
+    backupTextarea.value?.focus();
+    backupTextarea.value?.select();
+    document.execCommand('copy');
+    message.value = '导出 JSON 已复制';
+  }
+};
+
+const getBackupFileName = (): string => {
+  const dateKey = new Date().toISOString().slice(0, 10);
+  return `show-me-the-money-backup-${dateKey}.json`;
+};
+
+const downloadBackupFile = async () => {
+  const text = await ensureBackupText();
+  const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = getBackupFileName();
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  message.value = '备份 JSON 文件已导出';
+};
+
 const importBackup = async () => {
   const result = await props.store.importBackup(importText.value);
   message.value = result.ok ? '备份已导入' : result.error;
+};
+
+const importBackupFile = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    importText.value = await file.text();
+    await importBackup();
+  } catch {
+    message.value = '无法读取备份文件';
+  } finally {
+    input.value = '';
+  }
 };
 
 // First-level Category CRUD Operations
@@ -696,10 +761,38 @@ const clearData = async () => {
               <button type="button" class="tiny-action" @click="goBack()">返回</button>
               <h2>备份恢复</h2>
             </div>
-            <button class="secondary-action" type="button" @click="exportBackup">导出 JSON</button>
-            <textarea v-model="backupText" rows="7" readonly placeholder="导出的 JSON 会显示在这里" />
-            <textarea v-model="importText" rows="7" placeholder="粘贴 JSON 备份后导入" />
-            <button class="primary-action" type="button" @click="importBackup">导入 JSON</button>
+            <div class="backup-tool-block">
+              <h3>导出备份</h3>
+              <button class="secondary-action" type="button" @click="exportBackup">生成 JSON 文本</button>
+              <textarea
+                ref="backupTextarea"
+                v-model="backupText"
+                rows="7"
+                readonly
+                placeholder="导出的 JSON 会显示在这里"
+              />
+              <div class="backup-action-grid">
+                <button class="tiny-action wide-action" type="button" @click="selectBackupText">全选</button>
+                <button class="tiny-action wide-action" type="button" @click="copyBackupText">复制</button>
+                <button class="tiny-action wide-action" type="button" @click="downloadBackupFile">导出文件</button>
+              </div>
+            </div>
+
+            <div class="backup-tool-block">
+              <h3>导入备份</h3>
+              <textarea v-model="importText" rows="7" placeholder="粘贴 JSON 备份后导入" />
+              <input
+                ref="importFileInput"
+                class="visually-hidden-file"
+                type="file"
+                accept="application/json,.json"
+                @change="importBackupFile"
+              />
+              <div class="backup-action-grid two-columns">
+                <button class="tiny-action wide-action" type="button" @click="importFileInput?.click()">选择文件</button>
+                <button class="primary-action" type="button" @click="importBackup">导入文本</button>
+              </div>
+            </div>
           </section>
         </template>
       </div>
@@ -885,6 +978,49 @@ const clearData = async () => {
 .subpage-slide-leave-from {
   transform: translate3d(0, 0, 0);
   opacity: 1;
+}
+
+.backup-tool-block {
+  display: grid;
+  gap: 12px;
+}
+
+.backup-tool-block + .backup-tool-block {
+  padding-top: 18px;
+  border-top: 3px solid var(--line);
+}
+
+.backup-tool-block h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.backup-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.backup-action-grid.two-columns {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.wide-action {
+  width: 100%;
+  min-height: 44px;
+}
+
+.visually-hidden-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
 }
 
 /* Custom Category Accordion styles */
