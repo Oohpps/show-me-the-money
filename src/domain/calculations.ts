@@ -159,8 +159,11 @@ export const getVisibleTrendSnapshots = <T extends { date: string }>(
   return sorted.slice(Math.max(0, sorted.length - Math.max(1, windowSize)));
 };
 
-export const parseAmount = (value: string): number | null => {
-  const normalized = value.trim().replace(/,/g, '');
+export const parseAmount = (value: string | number): number | null => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? roundMoney(value) : null;
+  }
+  const normalized = (value || '').trim().replace(/,/g, '');
   if (!normalized) {
     return null;
   }

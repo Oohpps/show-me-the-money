@@ -9,6 +9,7 @@ import {
   getSnapshotChange,
   getVisibleTrendSnapshots,
   upsertSnapshot,
+  parseAmount,
 } from './calculations';
 
 const categories: AssetCategory[] = DEFAULT_CATEGORIES;
@@ -169,5 +170,25 @@ describe('asset calculations', () => {
       '2026-05-22',
     ]);
     expect(getVisibleTrendSnapshots(snapshots, 20)).toHaveLength(4);
+  });
+
+  describe('parseAmount', () => {
+    it('parses valid numeric strings', () => {
+      expect(parseAmount('123.45')).toBe(123.45);
+      expect(parseAmount('1,234.56')).toBe(1234.56);
+      expect(parseAmount('  100  ')).toBe(100);
+    });
+
+    it('returns null for invalid or empty inputs', () => {
+      expect(parseAmount('')).toBeNull();
+      expect(parseAmount('abc')).toBeNull();
+      expect(parseAmount('   ')).toBeNull();
+    });
+
+    it('parses actual numbers correctly', () => {
+      expect(parseAmount(123.45 as any)).toBe(123.45);
+      expect(parseAmount(0 as any)).toBe(0);
+      expect(parseAmount(-50 as any)).toBe(-50);
+    });
   });
 });

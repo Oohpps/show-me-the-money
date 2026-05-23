@@ -4,7 +4,7 @@ defineProps<{
   note?: string;
 }>();
 
-const model = defineModel<string>({ required: true });
+const model = defineModel<string | number>({ required: true });
 </script>
 
 <template>
@@ -13,6 +13,6 @@ const model = defineModel<string>({ required: true });
       <strong>{{ label }}</strong>
       <small v-if="note">{{ note }}</small>
     </span>
-    <input v-model="model" type="number" inputmode="decimal" step="0.01" />
+    <input v-model="model" :aria-label="label" type="number" inputmode="decimal" step="0.01" />
   </label>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, watchEffect } from 'vue';
+import { computed, reactive, ref, watchEffect } from 'vue';
 import type { AssetStore } from '../composables/useAssetStore';
 import { parseAmount } from '../domain/calculations';
 import AmountInput from './AmountInput.vue';
@@ -12,7 +12,7 @@ const emit = defineEmits<{
   saved: [];
 }>();
 
-const form = reactive<Record<string, string>>({});
+const form = reactive<Record<string, string | number>>({});
 const getLocalDateKey = (date = new Date()): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -24,6 +24,7 @@ const entry = reactive({
   date: getLocalDateKey(),
 });
 const error = reactive({ message: '' });
+const isSaving = ref(false);
 
 const normalizeDateInput = (value: string): string | null => {
   const match = value.trim().match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
@@ -87,6 +88,10 @@ const groupedAccounts = computed(() =>
 );
 
 const save = async () => {
+  if (isSaving.value) {
+    return;
+  }
+
   const normalizedDate = normalizeDateInput(entry.date);
   if (!normalizedDate) {
     error.message = '请输入有效录入日期';
@@ -104,8 +109,15 @@ const save = async () => {
     balances[account.id] = amount;
   }
   error.message = '';
-  await props.store.saveBalances(balances, normalizedDate);
-  emit('saved');
+  isSaving.value = true;
+  try {
+    await props.store.saveBalances(balances, normalizedDate);
+    emit('saved');
+  } catch {
+    error.message = '保存失败，请稍后重试';
+  } finally {
+    isSaving.value = false;
+  }
 };
 </script>
 
@@ -142,6 +154,8 @@ const save = async () => {
       />
     </section>
     <p v-if="error.message" class="form-error">{{ error.message }}</p>
-    <button class="primary-action" type="submit">保存本次快照</button>
+    <button class="primary-action" type="submit" :disabled="isSaving">
+      {{ isSaving ? '保存中...' : '保存本次快照' }}
+    </button>
   </form>
 </template>

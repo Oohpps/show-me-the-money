@@ -13,6 +13,7 @@ import type { Account, AppSettings, AssetCategory, CategoryId, DailySnapshot, Th
 import {
   createSeededData,
   IndexedDbAssetRepository,
+  MemoryAssetRepository,
   type AssetData,
   type AssetRepository,
 } from '../storage/db';
@@ -82,6 +83,7 @@ export const createAssetStore = (
   now: () => Date = () => new Date(),
 ) => {
   const state = reactive<AssetState>(createInitialState());
+  let activeRepository = repository;
 
   const replaceState = (data: AssetData): void => {
     state.categories = sortCategories(data.categories?.length ? data.categories : DEFAULT_CATEGORIES);
@@ -98,24 +100,33 @@ export const createAssetStore = (
     }));
 
   const persist = async (): Promise<void> => {
-    await repository.write({
+    const data = {
       categories: state.categories,
       accounts: state.accounts,
       snapshots: state.snapshots,
       settings: state.settings,
-    });
+    };
+
+    try {
+      await activeRepository.write(data);
+    } catch {
+      activeRepository = new MemoryAssetRepository(data);
+      state.statusMessage = '本地存储暂不可用，本次修改仅在当前会话保留';
+    }
   };
 
   const load = async (): Promise<void> => {
     try {
-      const data = await withTimeout(repository.read(), 800);
+      const data = await withTimeout(activeRepository.read(), 800);
       replaceState(
         data.categories.length === 0 && data.accounts.length === 0 && data.snapshots.length === 0
           ? createSeededData()
           : data,
       );
     } catch {
-      replaceState(createSeededData());
+      const seededData = createSeededData();
+      replaceState(seededData);
+      activeRepository = new MemoryAssetRepository(seededData);
       state.statusMessage = '本地存储暂不可用，已载入示例数据';
     }
     state.loaded = true;
