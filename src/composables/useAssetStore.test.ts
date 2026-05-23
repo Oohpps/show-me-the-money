@@ -106,7 +106,29 @@ describe('asset store', () => {
     expect(store.state.categories.find((category) => category.id === 'payment')?.active).toBe(false);
     expect(store.state.accounts.some((account) => account.category === 'payment')).toBe(true);
     expect(store.activeCategories.value.some((category) => category.id === 'payment')).toBe(false);
+    expect(store.homepageCategories.value.some((category) => category.id === 'payment')).toBe(true);
     expect(store.categoryTotals.value.payment).toBe(0);
+    expect(store.categoryDisplayTotals.value.payment).toBe(0);
+  });
+
+  it('shows homepage categories even when their accounts are not counted in total assets', async () => {
+    const store = createAssetStore(repository);
+    await store.load();
+
+    await store.addCategory({ name: '保险', isNegative: false });
+    const insurance = store.state.categories.find((category) => category.name === '保险');
+    expect(insurance).toBeDefined();
+    await store.addAccount({
+      name: '商业保险',
+      category: insurance!.id,
+      balance: 5000,
+      includeInTotal: false,
+      note: '',
+    });
+
+    expect(store.totalAsset.value).toBe(0);
+    expect(store.homepageCategories.value.some((category) => category.id === insurance!.id)).toBe(true);
+    expect(store.categoryDisplayTotals.value[insurance!.id]).toBe(5000);
   });
 
   it('creates an account and persists it', async () => {

@@ -74,6 +74,25 @@ export const calculateCategoryTotals = (
   return totals;
 };
 
+export const calculateCategoryDisplayTotals = (
+  accounts: Account[],
+  categories: AssetCategory[],
+): Record<CategoryId, number> => {
+  const totals = emptyCategoryTotals(categories);
+  const categoryMap = new Map(categories.map((category) => [category.id, category]));
+
+  for (const account of accounts) {
+    const category = categoryMap.get(account.category);
+    if (category && account.category in totals) {
+      totals[account.category] = roundMoney(
+        totals[account.category] + (category.isNegative ? -Math.abs(account.balance) : account.balance),
+      );
+    }
+  }
+
+  return totals;
+};
+
 export const buildDailySnapshot = (
   accounts: Account[],
   categories: AssetCategory[],

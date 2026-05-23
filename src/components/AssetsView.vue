@@ -28,8 +28,8 @@ const monthChange = computed(() =>
       @open-stats="$emit('openStats')"
     />
     <CategoryGrid
-      :categories="store.activeCategories.value"
-      :totals="store.categoryTotals.value"
+      :categories="store.homepageCategories.value"
+      :totals="store.categoryDisplayTotals.value"
       :accounts="store.state.accounts"
       :hidden="store.state.settings.hideAmounts"
       @open="$emit('openStats')"

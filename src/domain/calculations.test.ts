@@ -3,6 +3,7 @@ import { DEFAULT_CATEGORIES } from './categories';
 import type { Account, AssetCategory, DailySnapshot } from './types';
 import {
   buildDailySnapshot,
+  calculateCategoryDisplayTotals,
   calculateCategoryTotals,
   calculateTotalAsset,
   formatMoney,
@@ -74,6 +75,26 @@ describe('asset calculations', () => {
 
     expect(calculateTotalAsset(accounts, inactiveCategories, true)).toBe(1000);
     expect(calculateCategoryTotals(accounts, inactiveCategories, true).payment).toBe(0);
+  });
+
+  it('keeps display totals for accounts excluded from total assets', () => {
+    const inactiveCategories = categories.map((category) =>
+      category.id === 'payment' ? { ...category, active: false } : category,
+    );
+    const accounts = [
+      baseAccount({ id: 'bank', category: 'bank', balance: 1000 }),
+      baseAccount({ id: 'alipay', category: 'payment', balance: 500 }),
+      baseAccount({ id: 'hidden-cash', category: 'cash', balance: 90, includeInTotal: false }),
+      baseAccount({ id: 'card', category: 'liability', balance: 30, includeInTotal: false }),
+    ];
+
+    expect(calculateTotalAsset(accounts, inactiveCategories, true)).toBe(1000);
+    expect(calculateCategoryDisplayTotals(accounts, inactiveCategories)).toMatchObject({
+      bank: 1000,
+      payment: 500,
+      cash: 90,
+      liability: -30,
+    });
   });
 
   it('builds one daily snapshot with category metadata and settings', () => {

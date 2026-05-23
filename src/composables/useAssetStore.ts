@@ -2,6 +2,7 @@ import { computed, reactive } from 'vue';
 import { createBackupJson, parseBackupJson } from '../domain/backup';
 import {
   buildDailySnapshot,
+  calculateCategoryDisplayTotals,
   calculateCategoryTotals,
   calculateTotalAsset,
   getDateKey,
@@ -138,7 +139,11 @@ export const createAssetStore = (
   const categoryTotals = computed(() =>
     calculateCategoryTotals(state.accounts, state.categories, state.settings.deductNegativeAssets),
   );
+  const categoryDisplayTotals = computed(() => calculateCategoryDisplayTotals(state.accounts, state.categories));
   const activeCategories = computed(() => state.categories.filter((category) => category.active));
+  const homepageCategories = computed(() =>
+    state.categories.filter((category) => state.accounts.some((account) => account.category === category.id)),
+  );
   const visibleSnapshots = computed<DailySnapshot[]>(() => state.snapshots);
 
   const addCategory = async (input: NewCategoryInput): Promise<void> => {
@@ -338,7 +343,9 @@ export const createAssetStore = (
     state,
     totalAsset,
     categoryTotals,
+    categoryDisplayTotals,
     activeCategories,
+    homepageCategories,
     visibleSnapshots,
     load,
     addCategory,

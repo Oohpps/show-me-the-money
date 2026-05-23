@@ -4,6 +4,7 @@ import type { AssetStore } from '../composables/useAssetStore';
 import { useNativeBackStack } from '../composables/useNativeBackStack';
 import { THEMES } from '../domain/themes';
 import type { AssetCategory, Account, CategoryId } from '../domain/types';
+import { saveBackupJsonFile } from '../native/backupFile';
 
 const props = defineProps<{
   store: AssetStore;
@@ -189,11 +190,18 @@ const getBackupFileName = (): string => {
 
 const downloadBackupFile = async () => {
   const text = await ensureBackupText();
+  const fileName = getBackupFileName();
+  const savedByNative = await saveBackupJsonFile(fileName, text);
+  if (savedByNative) {
+    message.value = '备份 JSON 文件已导出到下载目录';
+    return;
+  }
+
   const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = getBackupFileName();
+  link.download = fileName;
   document.body.append(link);
   link.click();
   link.remove();

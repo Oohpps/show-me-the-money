@@ -2,7 +2,7 @@
 
 Personal offline asset dashboard app for side-loaded Android use.
 
-Current release: `1.1.3`.
+Current release: `1.1.4`.
 
 ## What It Does
 
@@ -50,7 +50,7 @@ This repository keeps generated SDK/JDK tools and APK files out of git:
 - `.local-tools/`
 - `release/*.apk`
 
-The local packaging setup used for `1.1.3` is:
+The local packaging setup used for `1.1.4` is:
 
 ```powershell
 $env:JAVA_HOME = "E:\show-me-the-money\.local-tools\openjdk21\jdk-21.0.11+10"
@@ -84,10 +84,10 @@ The debug APK will be under:
 android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-For release `1.1.3`, the copied installable APK path is:
+For release `1.1.4`, the copied installable APK path is:
 
 ```text
-release/show-me-the-money-1.1.3-debug.apk
+release/show-me-the-money-1.1.4-debug.apk
 ```
 
 Install it on Android by enabling side-loading and opening the APK file on the phone.
